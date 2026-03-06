@@ -1,17 +1,24 @@
-<% layout('layout') -%>
-<div class="d-flex justify-content-between mb-3">
-  <h2>Serviços</h2>
-  <a class="btn btn-success" href="/services/new">Novo serviço</a>
-</div>
+const express = require('express');
+const expressLayouts = require('express-ejs-layouts');
+const path = require('path');
 
-<table class="table">
-  <thead><tr><th>Descrição</th><th>Preço</th></tr></thead>
-  <tbody>
-    <% services.forEach(s => { %>
-      <tr>
-        <td><%= s.description %></td>
-        <td>R$ <%= (s.price||0).toFixed(2) %></td>
-      </tr>
-    <% }) %>
-  </tbody>
-</table>
+const app = express();
+
+// Set up EJS for templating
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.set('layout', 'layout');
+
+// Use express-ejs-layouts middleware
+app.use(expressLayouts);
+
+// Define routes
+app.get('/', (req, res) => {
+    res.render('index');
+});
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
