@@ -10,7 +10,7 @@
     <% services.forEach(s => { %>
       <tr>
         <td><%= s.description %></td>
-        <td>R$ <%= s.price.toFixed(2) %></td>
+        <td>R$ <%= (s.price||0).toFixed(2) %></td>
       </tr>
     <% }) %>
   </tbody>

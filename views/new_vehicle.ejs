@@ -6,7 +6,7 @@
     <select name="customer_id" class="form-select" required>
       <option value="">-- selecione --</option>
       <% customers.forEach(c => { %>
-        <option value="<%= c.id %>"><%= c.name %></option>
+        <option value="<%= c._id || c.id %>"><%= c.name %></option>
       <% }) %>
     </select>
   </div>

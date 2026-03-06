@@ -6,7 +6,7 @@
     <select name="vehicle_id" class="form-select" required>
       <option value="">-- selecione --</option>
       <% vehicles.forEach(v => { %>
-        <option value="<%= v.id %>"><%= v.customer_name %> — <%= v.plate %> — <%= v.make %> <%= v.model %></option>
+        <option value="<%= v._id || v.id %>"><%= v.customer_name %> — <%= v.plate %> — <%= v.make %> <%= v.model %></option>
       <% }) %>
     </select>
   </div>
@@ -15,7 +15,7 @@
     <select name="service_id" class="form-select">
       <option value="">-- nenhum --</option>
       <% services.forEach(s => { %>
-        <option value="<%= s.id %>"><%= s.description %> — R$ <%= s.price.toFixed(2) %></option>
+        <option value="<%= s._id || s.id %>"><%= s.description %> — R$ <%= (s.price||0).toFixed(2) %></option>
       <% }) %>
     </select>
   </div>
