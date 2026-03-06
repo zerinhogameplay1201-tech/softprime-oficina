@@ -1,7 +1,7 @@
 {
-  "name": "softpime-oficina",
+  "name": "softprime-oficina",
   "version": "1.0.0",
-  "description": "MVP para Auto Elétrica - cadastro de clientes, veículos e agendamentos (softpime-oficina)",
+  "description": "MVP para Auto Elétrica - cadastro de clientes, veículos e agendamentos (softprime-oficina)",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -11,12 +11,12 @@
   "author": "you",
   "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.20.2",
-    "ejs": "^3.1.9",
-    "express": "^4.18.2",
-    "nedb-promises": "^7.1.1"
+    "body-parser": "^1.20.4",
+    "ejs": "^3.1.10",
+    "express": "^4.22.1",
+    "nedb": "^1.8.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.1.14"
   }
 }
