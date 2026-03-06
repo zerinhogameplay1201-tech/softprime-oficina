@@ -1,4 +1,5 @@
 const express = require('express');
+const expressLayouts = require('express-ejs-layouts');
 const path = require('path');
 const bodyParser = require('body-parser');
 const { customers, vehicles, services, appointments } = require('./db');
@@ -8,6 +9,10 @@ const PORT = process.env.PORT || 3000;
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
+
+// habilita express-ejs-layouts (fornece layout(...) dentro das views)
+app.use(expressLayouts);
+app.set('layout', 'layout');
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -47,7 +52,6 @@ app.get('/customers/:id', async (req, res) => {
 // ----- Vehicles -----
 app.get('/vehicles', async (req, res) => {
   const vs = await vehicles.find({}).sort({ created_at: -1 });
-  // join customer name
   const list = await Promise.all(vs.map(async v => {
     const c = await customers.findOne({ _id: v.customer_id });
     return { ...v, customer_name: c ? c.name : '—' };
