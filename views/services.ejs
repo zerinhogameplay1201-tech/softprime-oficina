@@ -1,0 +1,17 @@
+<% layout('layout') -%>
+<div class="d-flex justify-content-between mb-3">
+  <h2>Serviços</h2>
+  <a class="btn btn-success" href="/services/new">Novo serviço</a>
+</div>
+
+<table class="table">
+  <thead><tr><th>Descrição</th><th>Preço</th></tr></thead>
+  <tbody>
+    <% services.forEach(s => { %>
+      <tr>
+        <td><%= s.description %></td>
+        <td>R$ <%= s.price.toFixed(2) %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>

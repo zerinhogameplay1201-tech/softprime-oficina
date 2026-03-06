@@ -1,0 +1,32 @@
+<% layout('layout') -%>
+<h2>Novo Agendamento</h2>
+<form method="post" action="/appointments">
+  <div class="mb-3">
+    <label class="form-label">Veículo</label>
+    <select name="vehicle_id" class="form-select" required>
+      <option value="">-- selecione --</option>
+      <% vehicles.forEach(v => { %>
+        <option value="<%= v.id %>"><%= v.customer_name %> — <%= v.plate %> — <%= v.make %> <%= v.model %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Serviço</label>
+    <select name="service_id" class="form-select">
+      <option value="">-- nenhum --</option>
+      <% services.forEach(s => { %>
+        <option value="<%= s.id %>"><%= s.description %> — R$ <%= s.price.toFixed(2) %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Data e hora</label>
+    <input name="scheduled_at" type="datetime-local" class="form-control"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Observações</label>
+    <textarea name="notes" class="form-control"></textarea>
+  </div>
+  <button class="btn btn-primary">Agendar</button>
+  <a class="btn btn-link" href="/appointments">Cancelar</a>
+</form>

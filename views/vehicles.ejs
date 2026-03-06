@@ -1,0 +1,19 @@
+<% layout('layout') -%>
+<div class="d-flex justify-content-between mb-3">
+  <h2>Veículos</h2>
+  <a class="btn btn-success" href="/vehicles/new">Novo veículo</a>
+</div>
+
+<table class="table table-striped">
+  <thead><tr><th>Placa</th><th>Veículo</th><th>Dono</th><th>Criado</th></tr></thead>
+  <tbody>
+    <% vehicles.forEach(v => { %>
+      <tr>
+        <td><%= v.plate %></td>
+        <td><%= v.make %> <%= v.model %> (<%= v.year %>)</td>
+        <td><%= v.customer_name %></td>
+        <td><%= new Date(v.created_at).toLocaleString() %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>

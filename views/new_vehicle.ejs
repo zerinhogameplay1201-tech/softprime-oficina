@@ -1,0 +1,39 @@
+<% layout('layout') -%>
+<h2>Novo Veículo</h2>
+<form method="post" action="/vehicles">
+  <div class="mb-3">
+    <label class="form-label">Cliente</label>
+    <select name="customer_id" class="form-select" required>
+      <option value="">-- selecione --</option>
+      <% customers.forEach(c => { %>
+        <option value="<%= c.id %>"><%= c.name %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Marca</label>
+    <input name="make" class="form-control"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Modelo</label>
+    <input name="model" class="form-control"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Ano</label>
+    <input name="year" type="number" class="form-control"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Placa</label>
+    <input name="plate" class="form-control"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">VIN</label>
+    <input name="vin" class="form-control"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Observações</label>
+    <textarea name="notes" class="form-control"></textarea>
+  </div>
+  <button class="btn btn-primary">Criar</button>
+  <a class="btn btn-link" href="/vehicles">Cancelar</a>
+</form>

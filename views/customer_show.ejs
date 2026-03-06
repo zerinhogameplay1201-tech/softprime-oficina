@@ -1,0 +1,27 @@
+<% layout('layout') -%>
+<h2><%= customer.name %></h2>
+<p><strong>Telefone:</strong> <%= customer.phone %></p>
+<p><strong>Email:</strong> <%= customer.email %></p>
+<p><strong>Observações:</strong> <%= customer.notes %></p>
+
+<hr/>
+<div class="d-flex justify-content-between mb-3">
+  <h4>Veículos do cliente</h4>
+  <a class="btn btn-success" href="/vehicles/new">Adicionar veículo</a>
+</div>
+
+<table class="table">
+  <thead>
+    <tr><th>Placa</th><th>Marca/Modelo</th><th>Ano</th><th></th></tr>
+  </thead>
+  <tbody>
+    <% vehicles.forEach(v => { %>
+      <tr>
+        <td><%= v.plate %></td>
+        <td><%= v.make %> / <%= v.model %></td>
+        <td><%= v.year %></td>
+        <td></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>

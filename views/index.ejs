@@ -1,0 +1,30 @@
+<% layout('layout') -%>
+<div class="row">
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <h5 class="card-title">Clientes</h5>
+        <p class="card-text display-6"><%= totalCustomers %></p>
+        <a href="/customers" class="btn btn-primary">Ver clientes</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <h5 class="card-title">Veículos</h5>
+        <p class="card-text display-6"><%= totalVehicles %></p>
+        <a href="/vehicles" class="btn btn-primary">Ver veículos</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <h5 class="card-title">Agendamentos</h5>
+        <p class="card-text display-6"><%= totalAppointments %></p>
+        <a href="/appointments" class="btn btn-primary">Ver agendamentos</a>
+      </div>
+    </div>
+  </div>
+</div>

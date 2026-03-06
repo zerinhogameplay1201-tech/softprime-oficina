@@ -1,0 +1,20 @@
+<% layout('layout') -%>
+<div class="d-flex justify-content-between mb-3">
+  <h2>Agendamentos</h2>
+  <a class="btn btn-success" href="/appointments/new">Novo agendamento</a>
+</div>
+
+<table class="table table-striped">
+  <thead><tr><th>Data/Hora</th><th>Veículo</th><th>Cliente</th><th>Serviço</th><th>Status</th></tr></thead>
+  <tbody>
+    <% appts.forEach(a => { %>
+      <tr>
+        <td><%= a.scheduled_at ? new Date(a.scheduled_at).toLocaleString() : '-' %></td>
+        <td><%= a.make %> <%= a.model %> (<%= a.plate %>)</td>
+        <td><%= a.customer_name %></td>
+        <td><%= a.service_desc || '-' %></td>
+        <td><%= a.status %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>

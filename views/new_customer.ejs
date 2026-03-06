@@ -1,0 +1,22 @@
+<% layout('layout') -%>
+<h2>Novo Cliente</h2>
+<form method="post" action="/customers">
+  <div class="mb-3">
+    <label class="form-label">Nome</label>
+    <input name="name" required class="form-control"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Telefone</label>
+    <input name="phone" class="form-control"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Email</label>
+    <input name="email" class="form-control" type="email"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Observações</label>
+    <textarea name="notes" class="form-control"></textarea>
+  </div>
+  <button class="btn btn-primary">Criar</button>
+  <a class="btn btn-link" href="/customers">Cancelar</a>
+</form>
