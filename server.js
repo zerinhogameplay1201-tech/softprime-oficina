@@ -7,13 +7,16 @@ const { customers, vehicles, services, appointments } = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// views / ejs
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-// habilita express-ejs-layouts (fornece layout(...) dentro das views)
+// habilita express-ejs-layouts (fornece <% layout('layout') -%> nas views)
 app.use(expressLayouts);
 app.set('layout', 'layout');
+console.log('express-ejs-layouts habilitado');
 
+// middlewares
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 

@@ -9,11 +9,11 @@
     <tr><th>Descrição</th><th>Preço</th><th>Criado</th></tr>
   </thead>
   <tbody>
-    <% services.forEach(s => { %>
+    <% (services || []).forEach(s => { %>
       <tr>
         <td><%= s.description %></td>
         <td>R$ <%= (s.price||0).toFixed(2) %></td>
-        <td><%= new Date(s.created_at).toLocaleString() %></td>
+        <td><%= s.created_at ? new Date(s.created_at).toLocaleString() : '-' %></td>
       </tr>
     <% }) %>
   </tbody>
