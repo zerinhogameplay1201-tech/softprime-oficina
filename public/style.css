@@ -86,3 +86,74 @@ body {
   .login-card { margin: 0 12px; }
   .logo-circle { width: 56px; height: 56px; line-height: 56px; }
 }
+
+/* Dashboard modern styles */
+
+.dashboard-hero {
+  background: linear-gradient(90deg, rgba(44,123,229,0.92), rgba(111,66,193,0.9));
+  box-shadow: 0 6px 24px rgba(31,41,55,0.08);
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(17,24,39,0.06);
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow: 0 8px 22px rgba(15,23,42,0.06);
+}
+
+/* gradient variants */
+.bg-gradient-blue {
+  background: linear-gradient(135deg, #2c7be5, #3fb0ff);
+}
+.bg-gradient-green {
+  background: linear-gradient(135deg, #17c964, #0ac18f);
+}
+.bg-gradient-purple {
+  background: linear-gradient(135deg, #6f42c1, #a26bff);
+}
+
+/* stat value */
+.stat-value {
+  font-size: 2.4rem;
+  font-weight: 600;
+  margin-top: -4px;
+}
+
+/* cards & sections */
+.card {
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+}
+
+/* recent list placeholder */
+.recent-list { min-height: 140px; padding-left: 0; }
+.recent-empty {
+  color: #6c757d;
+  padding: 16px;
+  background: linear-gradient(180deg, #ffffff, #fbfbfb);
+  border-radius: 8px;
+  border: 1px dashed #e9ecef;
+}
+
+/* quick action buttons */
+.btn-outline-primary {
+  border-radius: 10px;
+}
+
+/* responsiveness */
+@media (max-width: 768px) {
+  .stat-card { flex-direction: row; gap: 12px; }
+  .stat-value { font-size: 1.8rem; }
+  .dashboard-hero { padding: 18px; }
+}

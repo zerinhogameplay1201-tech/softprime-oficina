@@ -1,40 +1,112 @@
 <%- include('partials/header') %>
 
-<div class="hero mb-4">
-  <div class="container">
-    <h3>Painel</h3>
-    <p class="small-muted">Bem-vindo — gerencie clientes, veículos, serviços e agendamentos</p>
+<div class="dashboard-hero rounded-3 mb-4 p-4 text-white">
+  <div class="d-flex justify-content-between align-items-center flex-wrap">
+    <div>
+      <h2 class="mb-1">Painel</h2>
+      <p class="small-muted mb-0">Visão rápida — clientes, veículos, serviços e agendamentos</p>
+    </div>
+    <div class="mt-3 mt-md-0">
+      <a href="/customers/new" class="btn btn-outline-light btn-sm me-2">Novo cliente</a>
+      <a href="/vehicles/new" class="btn btn-outline-light btn-sm me-2">Novo veículo</a>
+      <a href="/appointments/new" class="btn btn-light btn-sm">Agendar</a>
+    </div>
   </div>
 </div>
 
-<div class="row">
-  <div class="col-md-4">
-    <div class="card text-center">
-      <div class="card-body">
-        <h5 class="card-title">Clientes</h5>
-        <p class="card-text display-6"><%= totalCustomers %></p>
-        <a href="/customers" class="btn btn-primary">Ver clientes</a>
+<section class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="stat-card p-3 d-flex align-items-center">
+      <div class="stat-icon bg-gradient-blue me-3">
+        <!-- icon: users -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="white" viewBox="0 0 16 16">
+          <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3z"/>
+          <path fill-rule="evenodd" d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="small-muted">Clientes</div>
+        <div class="display-6 stat-value" data-target="<%= totalCustomers %>">0</div>
+        <a href="/customers" class="btn btn-sm btn-outline-secondary mt-2">Ver clientes</a>
       </div>
     </div>
   </div>
-  <div class="col-md-4">
-    <div class="card text-center">
-      <div class="card-body">
-        <h5 class="card-title">Veículos</h5>
-        <p class="card-text display-6"><%= totalVehicles %></p>
-        <a href="/vehicles" class="btn btn-primary">Ver veículos</a>
+
+  <div class="col-12 col-md-4">
+    <div class="stat-card p-3 d-flex align-items-center">
+      <div class="stat-icon bg-gradient-green me-3">
+        <!-- icon: car -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="white" viewBox="0 0 16 16">
+          <path d="M4 9a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+          <path d="M12 9a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+          <path d="M0 7a1 1 0 0 1 1-1h1l1-2h10l1 2h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1l-1 2H2l-1-2H0a1 1 0 0 1-1-1V7z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="small-muted">Veículos</div>
+        <div class="display-6 stat-value" data-target="<%= totalVehicles %>">0</div>
+        <a href="/vehicles" class="btn btn-sm btn-outline-secondary mt-2">Ver veículos</a>
       </div>
     </div>
   </div>
-  <div class="col-md-4">
-    <div class="card text-center">
-      <div class="card-body">
-        <h5 class="card-title">Agendamentos</h5>
-        <p class="card-text display-6"><%= totalAppointments %></p>
-        <a href="/appointments" class="btn btn-primary">Ver agendamentos</a>
+
+  <div class="col-12 col-md-4">
+    <div class="stat-card p-3 d-flex align-items-center">
+      <div class="stat-icon bg-gradient-purple me-3">
+        <!-- icon: calendar -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="white" viewBox="0 0 16 16">
+          <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h.5A1.5 1.5 0 0 1 15 2.5v11A1.5 1.5 0 0 1 13.5 15h-11A1.5 1.5 0 0 1 1 13.5v-11A1.5 1.5 0 0 1 2.5 1H3V.5a.5.5 0 0 1 .5-.5z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="small-muted">Agendamentos</div>
+        <div class="display-6 stat-value" data-target="<%= totalAppointments %>">0</div>
+        <a href="/appointments" class="btn btn-sm btn-outline-secondary mt-2">Ver agendamentos</a>
       </div>
     </div>
   </div>
-</div>
+</section>
+
+<section class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Atividades recentes</h5>
+      <div class="small-muted mb-2">Últimas ações — (rápido histórico)</div>
+      <ul class="list-unstyled recent-list">
+        <li class="recent-empty">Nenhuma atividade ainda — crie um cliente ou agendamento.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card p-3 h-100">
+      <h5 class="mb-3">Ações rápidas</h5>
+      <div class="d-grid gap-2">
+        <a href="/customers/new" class="btn btn-outline-primary">Novo Cliente</a>
+        <a href="/vehicles/new" class="btn btn-outline-success">Novo Veículo</a>
+        <a href="/appointments/new" class="btn btn-primary">Novo Agendamento</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // anima números
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.stat-value').forEach(el => {
+      const target = Number(el.dataset.target) || 0;
+      const duration = 800;
+      const start = 0;
+      const startTime = performance.now();
+      const step = (now) => {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const value = Math.floor(progress * (target - start) + start);
+        el.textContent = value;
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  });
+</script>
 
 <%- include('partials/footer') %>
