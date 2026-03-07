@@ -1,0 +1,42 @@
+<%- include('partials/header') %>
+
+<h2>Editar Agendamento</h2>
+<form method="post" action="/appointments/<%= appt._id %>/update">
+  <div class="mb-3">
+    <label class="form-label">Veículo</label>
+    <select name="vehicle_id" class="form-select" required>
+      <% (vehicles || []).forEach(v => { %>
+        <option value="<%= v._id %>" <%= v._id === appt.vehicle_id ? 'selected' : '' %>><%= v.customer_name %> — <%= v.plate %> — <%= v.make %> <%= v.model %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Serviço</label>
+    <select name="service_id" class="form-select">
+      <option value="">-- nenhum --</option>
+      <% (services || []).forEach(s => { %>
+        <option value="<%= s._id %>" <%= s._id === appt.service_id ? 'selected' : '' %>><%= s.description %> — R$ <%= (s.price||0).toFixed(2) %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Data e hora</label>
+    <input name="scheduled_at" type="datetime-local" class="form-control" value="<%= appt.scheduled_at ? (new Date(appt.scheduled_at)).toISOString().slice(0,16) : '' %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Status</label>
+    <select name="status" class="form-select">
+      <option value="agendado" <%= appt.status === 'agendado' ? 'selected' : '' %>>agendado</option>
+      <option value="realizado" <%= appt.status === 'realizado' ? 'selected' : '' %>>realizado</option>
+      <option value="cancelado" <%= appt.status === 'cancelado' ? 'selected' : '' %>>cancelado</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Observações</label>
+    <textarea name="notes" class="form-control"><%= appt.notes %></textarea>
+  </div>
+  <button class="btn btn-primary">Salvar</button>
+  <a class="btn btn-link" href="/appointments">Cancelar</a>
+</form>
+
+<%- include('partials/footer') %>

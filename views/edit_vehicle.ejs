@@ -1,0 +1,41 @@
+<%- include('partials/header') %>
+
+<h2>Editar Veículo</h2>
+<form method="post" action="/vehicles/<%= vehicle._id %>/update">
+  <div class="mb-3">
+    <label class="form-label">Cliente</label>
+    <select name="customer_id" class="form-select" required>
+      <% (customers || []).forEach(c => { %>
+        <option value="<%= c._id %>" <%= c._id === vehicle.customer_id ? 'selected' : '' %>><%= c.name %></option>
+      <% }) %>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Marca</label>
+    <input name="make" class="form-control" value="<%= vehicle.make %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Modelo</label>
+    <input name="model" class="form-control" value="<%= vehicle.model %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Ano</label>
+    <input name="year" type="number" class="form-control" value="<%= vehicle.year %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Placa</label>
+    <input name="plate" class="form-control" value="<%= vehicle.plate %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">VIN</label>
+    <input name="vin" class="form-control" value="<%= vehicle.vin %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Observações</label>
+    <textarea name="notes" class="form-control"><%= vehicle.notes %></textarea>
+  </div>
+  <button class="btn btn-primary">Salvar</button>
+  <a class="btn btn-link" href="/vehicles">Cancelar</a>
+</form>
+
+<%- include('partials/footer') %>
