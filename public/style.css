@@ -29,3 +29,60 @@ body {
 .small-muted {
   color: #6c757d;
 }
+
+/* Login styles */
+.login-background {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* suave gradiente */
+  background: linear-gradient(180deg, #f4f6f8 0%, #eef2f5 50%, #f8fbfd 100%);
+}
+
+.login-viewport {
+  width: 100%;
+  padding: 40px 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  border: none;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+/* circular logo placeholder */
+.logo-circle {
+  width: 64px;
+  height: 64px;
+  line-height: 64px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2c7be5, #6f42c1);
+  color: white;
+  font-weight: 700;
+  font-size: 20px;
+  box-shadow: 0 6px 18px rgba(44,123,229,0.18);
+}
+
+/* password toggle style */
+#togglePassword {
+  border-left: 0;
+}
+#togglePassword.active {
+  background: #e9ecef;
+}
+
+/* smaller inputs for a modern look */
+.form-control.form-control-lg {
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+}
+
+/* responsive tweak */
+@media (max-width: 576px) {
+  .login-card { margin: 0 12px; }
+  .logo-circle { width: 56px; height: 56px; line-height: 56px; }
+}
