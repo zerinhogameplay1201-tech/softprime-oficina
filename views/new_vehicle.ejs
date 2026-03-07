@@ -1,11 +1,12 @@
-<% layout('layout') -%>
+<%- include('partials/header') %>
+
 <h2>Novo Veículo</h2>
 <form method="post" action="/vehicles">
   <div class="mb-3">
     <label class="form-label">Cliente</label>
     <select name="customer_id" class="form-select" required>
       <option value="">-- selecione --</option>
-      <% customers.forEach(c => { %>
+      <% (customers || []).forEach(c => { %>
         <option value="<%= c._id || c.id %>"><%= c.name %></option>
       <% }) %>
     </select>
@@ -37,3 +38,5 @@
   <button class="btn btn-primary">Criar</button>
   <a class="btn btn-link" href="/vehicles">Cancelar</a>
 </form>
+
+<%- include('partials/footer') %>

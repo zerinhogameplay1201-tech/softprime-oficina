@@ -1,4 +1,5 @@
-<% layout('layout') -%>
+<%- include('partials/header') %>
+
 <h2>Novo Serviço</h2>
 <form method="post" action="/services">
   <div class="mb-3">
@@ -12,3 +13,5 @@
   <button class="btn btn-primary">Criar</button>
   <a class="btn btn-link" href="/services">Cancelar</a>
 </form>
+
+<%- include('partials/footer') %>

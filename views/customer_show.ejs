@@ -1,4 +1,5 @@
-<% layout('layout') -%>
+<%- include('partials/header') %>
+
 <h2><%= customer.name %></h2>
 <p><strong>Telefone:</strong> <%= customer.phone %></p>
 <p><strong>Email:</strong> <%= customer.email %></p>
@@ -15,7 +16,7 @@
     <tr><th>Placa</th><th>Marca/Modelo</th><th>Ano</th><th></th></tr>
   </thead>
   <tbody>
-    <% vehicles.forEach(v => { %>
+    <% (vehicles || []).forEach(v => { %>
       <tr>
         <td><%= v.plate %></td>
         <td><%= v.make %> / <%= v.model %></td>
@@ -25,3 +26,5 @@
     <% }) %>
   </tbody>
 </table>
+
+<%- include('partials/footer') %>
