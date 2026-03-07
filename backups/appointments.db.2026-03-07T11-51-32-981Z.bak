@@ -1,0 +1,2 @@
+{"$$indexCreated":{"fieldName":"vehicle_id","unique":false,"sparse":false}}
+{"$$indexCreated":{"fieldName":"scheduled_at","unique":false,"sparse":false}}

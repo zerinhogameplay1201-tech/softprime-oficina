@@ -5,8 +5,17 @@
   <a class="btn btn-success" href="/appointments/new">Novo agendamento</a>
 </div>
 
+<form class="mb-3 row" method="get" action="/appointments">
+  <div class="col-auto">
+    <input name="q" value="<%= q || '' %>" class="form-control" placeholder="Pesquisar agendamentos..."/>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-secondary">Buscar</button>
+  </div>
+</form>
+
 <table class="table table-striped">
-  <thead><tr><th>Data/Hora</th><th>Veículo</th><th>Cliente</th><th>Serviço</th><th>Status</th></tr></thead>
+  <thead><tr><th>Data/Hora</th><th>Veículo</th><th>Cliente</th><th>Serviço</th><th>Status</th><th>Preço</th><th></th></tr></thead>
   <tbody>
     <% (appts || []).forEach(a => { %>
       <tr>
@@ -15,6 +24,18 @@
         <td><%= a.customer_name %></td>
         <td><%= a.service_desc || '-' %></td>
         <td><%= a.status %></td>
+        <td>R$ <%= (a.total_price || 0).toFixed(2) %></td>
+        <td>
+          <a class="btn btn-sm btn-outline-secondary" href="/appointments/<%= a._id %>/edit">Editar</a>
+          <a class="btn btn-sm btn-outline-primary" href="/appointments/<%= a._id %>/estimate" target="_blank">PDF</a>
+          <form action="/appointments/<%= a._id %>/email" method="post" style="display:inline" onsubmit="return confirm('Enviar orçamento por email?')">
+            <input type="hidden" name="to" value="<%= a.customer_email || '' %>">
+            <button class="btn btn-sm btn-outline-success">Enviar por email</button>
+          </form>
+          <form action="/appointments/<%= a._id %>/delete" method="post" style="display:inline" onsubmit="return confirm('Excluir agendamento?')">
+            <button class="btn btn-sm btn-outline-danger">Excluir</button>
+          </form>
+        </td>
       </tr>
     <% }) %>
   </tbody>

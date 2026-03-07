@@ -5,8 +5,17 @@
   <a class="btn btn-success" href="/vehicles/new">Novo veículo</a>
 </div>
 
+<form class="mb-3 row" method="get" action="/vehicles">
+  <div class="col-auto">
+    <input name="q" value="<%= q || '' %>" class="form-control" placeholder="Pesquisar veículos..."/>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-secondary">Buscar</button>
+  </div>
+</form>
+
 <table class="table table-striped">
-  <thead><tr><th>Placa</th><th>Veículo</th><th>Dono</th><th>Criado</th></tr></thead>
+  <thead><tr><th>Placa</th><th>Veículo</th><th>Dono</th><th>Criado</th><th></th></tr></thead>
   <tbody>
     <% (vehicles || []).forEach(v => { %>
       <tr>
@@ -14,6 +23,12 @@
         <td><%= v.make %> <%= v.model %> (<%= v.year %>)</td>
         <td><%= v.customer_name %></td>
         <td><%= v.created_at ? new Date(v.created_at).toLocaleString() : '-' %></td>
+        <td>
+          <a class="btn btn-sm btn-outline-secondary" href="/vehicles/<%= v._id %>/edit">Editar</a>
+          <form action="/vehicles/<%= v._id %>/delete" method="post" style="display:inline" onsubmit="return confirm('Excluir veículo?')">
+            <button class="btn btn-sm btn-outline-danger">Excluir</button>
+          </form>
+        </td>
       </tr>
     <% }) %>
   </tbody>

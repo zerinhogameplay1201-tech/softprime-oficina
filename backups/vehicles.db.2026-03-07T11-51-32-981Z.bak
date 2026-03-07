@@ -1,0 +1,3 @@
+{"customer_id":"piUP6RvHGshNpaQe","make":"chevrolet","model":"vectra","year":2007,"plate":"GB4Y5216","vin":"","notes":"","created_at":{"$$date":1772855332479},"_id":"DqynK63yyTVJgjLY"}
+{"$$indexCreated":{"fieldName":"customer_id","unique":false,"sparse":false}}
+{"$$indexCreated":{"fieldName":"created_at","unique":false,"sparse":false}}

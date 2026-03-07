@@ -1,0 +1,2 @@
+{"description":"Troca bomba de combustivel","price":350,"created_at":{"$$date":1772855372526},"_id":"dSVq4YrI3lyx2TgY"}
+{"$$indexCreated":{"fieldName":"created_at","unique":false,"sparse":false}}

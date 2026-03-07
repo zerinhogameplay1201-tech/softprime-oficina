@@ -7,6 +7,10 @@
     <input name="name" required class="form-control" value="<%= customer.name %>"/>
   </div>
   <div class="mb-3">
+    <label class="form-label">Endereço</label>
+    <input name="address" class="form-control" value="<%= customer.address || '' %>"/>
+  </div>
+  <div class="mb-3">
     <label class="form-label">Telefone</label>
     <input name="phone" class="form-control" value="<%= customer.phone %>"/>
   </div>

@@ -5,9 +5,18 @@
   <a class="btn btn-success" href="/services/new">Novo serviço</a>
 </div>
 
+<form class="mb-3 row" method="get" action="/services">
+  <div class="col-auto">
+    <input name="q" value="<%= q || '' %>" class="form-control" placeholder="Pesquisar serviços..."/>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-secondary">Buscar</button>
+  </div>
+</form>
+
 <table class="table table-striped">
   <thead>
-    <tr><th>Descrição</th><th>Preço</th><th>Criado</th></tr>
+    <tr><th>Descrição</th><th>Preço</th><th>Criado</th><th></th></tr>
   </thead>
   <tbody>
     <% (services || []).forEach(s => { %>
@@ -15,6 +24,12 @@
         <td><%= s.description %></td>
         <td>R$ <%= (s.price||0).toFixed(2) %></td>
         <td><%= s.created_at ? new Date(s.created_at).toLocaleString() : '-' %></td>
+        <td>
+          <a class="btn btn-sm btn-outline-secondary" href="/services/<%= s._id %>/edit">Editar</a>
+          <form action="/services/<%= s._id %>/delete" method="post" style="display:inline" onsubmit="return confirm('Excluir serviço?')">
+            <button class="btn btn-sm btn-outline-danger">Excluir</button>
+          </form>
+        </td>
       </tr>
     <% }) %>
   </tbody>

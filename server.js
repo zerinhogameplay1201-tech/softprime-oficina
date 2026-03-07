@@ -1,11 +1,10 @@
 const express = require('express');
-const expressLayouts = require('express-ejs-layouts');
 const path = require('path');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const { check, validationResult } = require('express-validator');
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
+const nodemailer = require('nodemailer');
 const { customers, vehicles, services, appointments } = require('./db');
 
 const app = express();
@@ -18,10 +17,6 @@ const ADMIN_PASS = process.env.ADMIN_PASS || 'secret';
 // views / ejs
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
-
-// habilita express-ejs-layouts (opcional, usamos partials mas mantemos)
-// app.use(expressLayouts);
-// app.set('layout', 'layout');
 
 // middlewares
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -90,8 +85,7 @@ function applySearchAndPagination(list = [], q, page = 1, limit = 20, fields = [
   return { data: paged, total, page, limit, pages: Math.ceil(total / limit) };
 }
 
-// ----- CUSTOMERS (existing + edit/delete already added earlier) -----
-// GET /customers (list with search/pagination)
+// ----- CUSTOMERS -----
 app.get('/customers', async (req, res) => {
   const q = req.query.q || '';
   const page = req.query.page || 1;
@@ -101,7 +95,6 @@ app.get('/customers', async (req, res) => {
   res.render('customers', { customers: result.data, q, pagination: { total: result.total, page: result.page, pages: result.pages, limit: result.limit } });
 });
 
-// other customer routes (create, show, new, edit, update, delete) kept as before:
 app.get('/customers/new', ensureAuth, (req, res) => {
   res.render('new_customer');
 });
@@ -112,8 +105,8 @@ app.post('/customers',
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.render('new_customer', { errors: errors.array() });
-    const { name, phone, email, notes } = req.body;
-    await customers.insert({ name, phone, email, notes, created_at: new Date() });
+    const { name, phone, email, notes, address } = req.body;
+    await customers.insert({ name, phone, email, notes, address, created_at: new Date() });
     res.redirect('/customers');
   }
 );
@@ -135,8 +128,8 @@ app.get('/customers/:id/edit', ensureAuth, async (req, res) => {
 
 app.post('/customers/:id/update', ensureAuth, async (req, res) => {
   const id = req.params.id;
-  const { name, phone, email, notes } = req.body;
-  await customers.update({ _id: id }, { $set: { name, phone, email, notes } }, {});
+  const { name, phone, email, notes, address } = req.body;
+  await customers.update({ _id: id }, { $set: { name, phone, email, notes, address } }, {});
   res.redirect('/customers/' + id);
 });
 
@@ -146,7 +139,7 @@ app.post('/customers/:id/delete', ensureAuth, async (req, res) => {
   res.redirect('/customers');
 });
 
-// ----- VEHICLES (CRUD + search/pagination) -----
+// ----- VEHICLES -----
 app.get('/vehicles', async (req, res) => {
   const q = req.query.q || '';
   const page = req.query.page || 1;
@@ -174,7 +167,7 @@ app.post('/vehicles', ensureAuth, [
     const cs = await customers.find({}).sort({ name: 1 });
     return res.render('new_vehicle', { customers: cs, errors: errors.array() });
   }
-  const { customer_id, make, model, year, plate, vin, notes } = req.body;
+  const { customer_id, make, model, year, plate, vin, notes, color, mileage } = req.body;
   await vehicles.insert({
     customer_id,
     make,
@@ -183,6 +176,8 @@ app.post('/vehicles', ensureAuth, [
     plate,
     vin,
     notes,
+    color: color || null,
+    mileage: mileage ? Number(mileage) : null,
     created_at: new Date()
   });
   res.redirect('/vehicles');
@@ -198,8 +193,8 @@ app.get('/vehicles/:id/edit', ensureAuth, async (req, res) => {
 
 app.post('/vehicles/:id/update', ensureAuth, async (req, res) => {
   const id = req.params.id;
-  const { customer_id, make, model, year, plate, vin, notes } = req.body;
-  await vehicles.update({ _id: id }, { $set: { customer_id, make, model, year: year ? Number(year) : null, plate, vin, notes } }, {});
+  const { customer_id, make, model, year, plate, vin, notes, color, mileage } = req.body;
+  await vehicles.update({ _id: id }, { $set: { customer_id, make, model, year: year ? Number(year) : null, plate, vin, notes, color: color || null, mileage: mileage ? Number(mileage) : null } }, {});
   res.redirect('/vehicles');
 });
 
@@ -209,7 +204,7 @@ app.post('/vehicles/:id/delete', ensureAuth, async (req, res) => {
   res.redirect('/vehicles');
 });
 
-// ----- SERVICES (CRUD + search/pagination) -----
+// ----- SERVICES -----
 app.get('/services', async (req, res) => {
   const q = req.query.q || '';
   const page = req.query.page || 1;
@@ -229,8 +224,14 @@ app.post('/services', ensureAuth, [
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.render('new_service', { errors: errors.array() });
-  const { description, price } = req.body;
-  await services.insert({ description, price: price ? Number(price) : 0, created_at: new Date() });
+  const { description, price, duration, parts_cost } = req.body;
+  await services.insert({
+    description,
+    price: price ? Number(price) : 0,
+    duration: duration ? Number(duration) : null,
+    parts_cost: parts_cost ? Number(parts_cost) : 0,
+    created_at: new Date()
+  });
   res.redirect('/services');
 });
 
@@ -243,8 +244,8 @@ app.get('/services/:id/edit', ensureAuth, async (req, res) => {
 
 app.post('/services/:id/update', ensureAuth, async (req, res) => {
   const id = req.params.id;
-  const { description, price } = req.body;
-  await services.update({ _id: id }, { $set: { description, price: price ? Number(price) : 0 } }, {});
+  const { description, price, duration, parts_cost } = req.body;
+  await services.update({ _id: id }, { $set: { description, price: price ? Number(price) : 0, duration: duration ? Number(duration) : null, parts_cost: parts_cost ? Number(parts_cost) : 0 } }, {});
   res.redirect('/services');
 });
 
@@ -254,7 +255,7 @@ app.post('/services/:id/delete', ensureAuth, async (req, res) => {
   res.redirect('/services');
 });
 
-// ----- APPOINTMENTS (CRUD + search/pagination + PDF) -----
+// ----- APPOINTMENTS -----
 app.get('/appointments', async (req, res) => {
   const q = req.query.q || '';
   const page = req.query.page || 1;
@@ -271,7 +272,8 @@ app.get('/appointments', async (req, res) => {
       model: v ? v.model : '',
       plate: v ? v.plate : '',
       service_desc: s ? s.description : null,
-      customer_name: c ? c.name : ''
+      customer_name: c ? c.name : '',
+      customer_email: c ? c.email : ''
     };
   }));
   const result = applySearchAndPagination(full, q, page, limit, ['make', 'model', 'plate', 'customer_name', 'service_desc', 'status']);
@@ -301,12 +303,21 @@ app.post('/appointments', ensureAuth, [
     const ss = await services.find({}).sort({ description: 1 });
     return res.render('new_appointment', { vehicles: vehiclesWithOwners, services: ss, errors: errors.array() });
   }
-  const { vehicle_id, service_id, scheduled_at, notes } = req.body;
+  const { vehicle_id, service_id, scheduled_at, notes, technician, total_price } = req.body;
+  // compute total price (service price + parts_cost) unless total_price provided
+  let computedTotal = null;
+  if (service_id) {
+    const s = await services.findOne({ _id: service_id });
+    if (s) computedTotal = (s.price || 0) + (s.parts_cost || 0);
+  }
+  const finalPrice = total_price ? Number(total_price) : (computedTotal !== null ? computedTotal : 0);
   await appointments.insert({
     vehicle_id,
     service_id: service_id || null,
     scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
     notes,
+    technician: technician || null,
+    total_price: finalPrice,
     created_at: new Date(),
     status: 'agendado'
   });
@@ -328,13 +339,21 @@ app.get('/appointments/:id/edit', ensureAuth, async (req, res) => {
 
 app.post('/appointments/:id/update', ensureAuth, async (req, res) => {
   const id = req.params.id;
-  const { vehicle_id, service_id, scheduled_at, notes, status } = req.body;
+  const { vehicle_id, service_id, scheduled_at, notes, status, technician, total_price } = req.body;
+  let computedTotal = null;
+  if (service_id) {
+    const s = await services.findOne({ _id: service_id });
+    if (s) computedTotal = (s.price || 0) + (s.parts_cost || 0);
+  }
+  const finalPrice = total_price ? Number(total_price) : (computedTotal !== null ? computedTotal : 0);
   await appointments.update({ _id: id }, { $set: {
     vehicle_id,
     service_id: service_id || null,
     scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
     notes,
-    status: status || 'agendado'
+    status: status || 'agendado',
+    technician: technician || null,
+    total_price: finalPrice
   } }, {});
   res.redirect('/appointments');
 });
@@ -354,26 +373,138 @@ app.get('/appointments/:id/estimate', ensureAuth, async (req, res) => {
   const s = a.service_id ? await services.findOne({ _id: a.service_id }) : null;
   const c = v ? await customers.findOne({ _id: v.customer_id }) : null;
 
-  // cria PDF
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  const getPdfBuffer = () => new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    doc.fontSize(20).text('Orçamento - Softprime Oficina', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Cliente: ${c ? c.name : '-'}`);
+    doc.text(`Telefone: ${c ? c.phone : '-'}`);
+    doc.text(`Email: ${c ? c.email : '-'}`);
+    if (c && c.address) doc.text(`Endereço: ${c.address}`);
+    doc.moveDown();
+    doc.text(`Veículo: ${v ? `${v.make} ${v.model} (${v.plate})` : '-'}`);
+    if (v) {
+      doc.text(`Cor: ${v.color || '-' }  Quilometragem: ${v.mileage || '-'}`);
+    }
+    doc.moveDown();
+    doc.text(`Serviço: ${s ? s.description : '-'}`);
+    if (s) {
+      doc.text(`Duração estimada: ${s.duration || '-'} h`);
+      doc.text(`Custo peças: R$ ${(s.parts_cost||0).toFixed(2)}`);
+    }
+    doc.moveDown();
+    doc.fontSize(14).text(`Preço total: R$ ${(a.total_price || 0).toFixed(2)}`);
+    doc.moveDown();
+    doc.text(`Técnico: ${a.technician || '-'}`);
+    doc.moveDown();
+    doc.text(`Data agendada: ${a.scheduled_at ? new Date(a.scheduled_at).toLocaleString() : '-'}`);
+    doc.moveDown();
+    doc.text('Observações:');
+    doc.text(a.notes || '-');
+
+    doc.end();
+  });
+
+  const buffer = await getPdfBuffer();
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename=orcamento-${id}.pdf`);
-  doc.fontSize(20).text('Orçamento - Softprime Oficina', { align: 'center' });
-  doc.moveDown();
-  doc.fontSize(12).text(`Cliente: ${c ? c.name : '-'}`);
-  doc.text(`Telefone: ${c ? c.phone : '-'}`);
-  doc.text(`Email: ${c ? c.email : '-'}`);
-  doc.moveDown();
-  doc.text(`Veículo: ${v ? `${v.make} ${v.model} (${v.plate})` : '-'}`);
-  doc.text(`Serviço: ${s ? s.description : '-'}`);
-  doc.text(`Preço: R$ ${s ? (s.price||0).toFixed(2) : '0.00'}`);
-  doc.moveDown();
-  doc.text(`Data agendada: ${a.scheduled_at ? new Date(a.scheduled_at).toLocaleString() : '-'}`);
-  doc.moveDown();
-  doc.text('Observações:');
-  doc.text(a.notes || '-');
-  doc.end();
-  doc.pipe(res);
+  res.send(buffer);
+});
+
+// Envia orçamento por email (PDF em anexo)
+app.post('/appointments/:id/email', ensureAuth, async (req, res) => {
+  const id = req.params.id;
+  const to = req.body.to || req.body.email || null;
+  const a = await appointments.findOne({ _id: id });
+  if (!a) return res.status(404).send('Agendamento não encontrado');
+  const v = await vehicles.findOne({ _id: a.vehicle_id });
+  const s = a.service_id ? await services.findOne({ _id: a.service_id }) : null;
+  const c = v ? await customers.findOne({ _id: v.customer_id }) : null;
+
+  const getPdfBuffer = () => new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    doc.fontSize(20).text('Orçamento - Softprime Oficina', { align: 'center' });
+    doc.moveDown();
+    doc.fontSize(12).text(`Cliente: ${c ? c.name : '-'}`);
+    doc.text(`Telefone: ${c ? c.phone : '-'}`);
+    doc.text(`Email: ${c ? c.email : '-'}`);
+    if (c && c.address) doc.text(`Endereço: ${c.address}`);
+    doc.moveDown();
+    doc.text(`Veículo: ${v ? `${v.make} ${v.model} (${v.plate})` : '-'}`);
+    if (v) {
+      doc.text(`Cor: ${v.color || '-' }  Quilometragem: ${v.mileage || '-'}`);
+    }
+    doc.moveDown();
+    doc.text(`Serviço: ${s ? s.description : '-'}`);
+    if (s) {
+      doc.text(`Duração estimada: ${s.duration || '-'} h`);
+      doc.text(`Custo peças: R$ ${(s.parts_cost||0).toFixed(2)}`);
+    }
+    doc.moveDown();
+    doc.fontSize(14).text(`Preço total: R$ ${(a.total_price || 0).toFixed(2)}`);
+    doc.moveDown();
+    doc.text(`Técnico: ${a.technician || '-'}`);
+    doc.moveDown();
+    doc.text(`Data agendada: ${a.scheduled_at ? new Date(a.scheduled_at).toLocaleString() : '-'}`);
+    doc.moveDown();
+    doc.text('Observações:');
+    doc.text(a.notes || '-');
+
+    doc.end();
+  });
+
+  const buffer = await getPdfBuffer();
+
+  // transporter via environment variables
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = process.env.SMTP_PORT;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpSecure = (process.env.SMTP_SECURE === 'true');
+  const emailFrom = process.env.EMAIL_FROM || (process.env.SMTP_USER || 'noreply@example.com');
+
+  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass) {
+    return res.status(500).send('SMTP não configurado. Defina SMTP_HOST, SMTP_PORT, SMTP_USER e SMTP_PASS nas variáveis de ambiente.');
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: Number(smtpPort),
+    secure: smtpSecure,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass
+    }
+  });
+
+  const recipient = to || (c && c.email) || null;
+  if (!recipient) return res.status(400).send('Nenhum destinatário de email informado.');
+
+  try {
+    await transporter.sendMail({
+      from: emailFrom,
+      to: recipient,
+      subject: `Orçamento - Softprime Oficina (#${id})`,
+      text: `Segue em anexo o orçamento para o agendamento ${id}.`,
+      attachments: [
+        { filename: `orcamento-${id}.pdf`, content: buffer }
+      ]
+    });
+    res.redirect('/appointments');
+  } catch (err) {
+    console.error('Erro ao enviar email:', err);
+    res.status(500).send('Erro ao enviar email: ' + err.message);
+  }
 });
 
 // Static fallback

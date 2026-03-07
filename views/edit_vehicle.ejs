@@ -19,6 +19,14 @@
     <input name="model" class="form-control" value="<%= vehicle.model %>"/>
   </div>
   <div class="mb-3">
+    <label class="form-label">Cor</label>
+    <input name="color" class="form-control" value="<%= vehicle.color || '' %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Quilometragem</label>
+    <input name="mileage" type="number" class="form-control" value="<%= vehicle.mileage || '' %>"/>
+  </div>
+  <div class="mb-3">
     <label class="form-label">Ano</label>
     <input name="year" type="number" class="form-control" value="<%= vehicle.year %>"/>
   </div>

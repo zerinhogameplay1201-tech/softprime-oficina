@@ -1,0 +1,2 @@
+{"$$indexCreated":{"fieldName":"created_at","unique":false,"sparse":false}}
+{"name":"Teste","phone":"18 99999-9999","email":"teste@gmail.com","notes":"","created_at":{"$$date":1772883300131},"_id":"Pv1O1LT3rIN6w5Oz"}

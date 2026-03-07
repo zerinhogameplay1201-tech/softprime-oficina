@@ -5,6 +5,15 @@
   <a class="btn btn-success" href="/customers/new">Novo cliente</a>
 </div>
 
+<form class="mb-3 row" method="get" action="/customers">
+  <div class="col-auto">
+    <input name="q" value="<%= q || '' %>" class="form-control" placeholder="Pesquisar clientes..."/>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-secondary">Buscar</button>
+  </div>
+</form>
+
 <table class="table table-striped">
   <thead>
     <tr>
