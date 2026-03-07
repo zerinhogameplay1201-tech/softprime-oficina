@@ -5,7 +5,7 @@ const session = require('express-session');
 const { check, validationResult } = require('express-validator');
 const PDFDocument = require('pdfkit');
 const nodemailer = require('nodemailer');
-const { customers, vehicles, services, appointments } = require('./db');
+const { customers, vehicles, services, appointments, parts } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -253,6 +253,78 @@ app.post('/services/:id/delete', ensureAuth, async (req, res) => {
   const id = req.params.id;
   await services.remove({ _id: id }, {});
   res.redirect('/services');
+});
+
+// ----- PARTS (Peças) -----
+app.get('/parts', async (req, res) => {
+  const q = req.query.q || '';
+  const all = await parts.find({}).sort({ created_at: -1 });
+  const filtered = q ? all.filter(p => (p.name||'').toLowerCase().includes(q.toLowerCase()) || (p.sku||'').toLowerCase().includes(q.toLowerCase())) : all;
+  res.render('parts', { parts: filtered, q });
+});
+
+app.get('/parts/new', ensureAuth, (req, res) => {
+  res.render('new_part');
+});
+
+app.post('/parts', ensureAuth, [
+  check('name').notEmpty().withMessage('Nome obrigatório'),
+  check('sell_price').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Preço inválido'),
+  check('cost_price').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Custo inválido'),
+  check('quantity').optional({ checkFalsy: true }).isInt().withMessage('Quantidade inválida'),
+  check('min_stock').optional({ checkFalsy: true }).isInt().withMessage('Estoque mínimo inválido')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.render('new_part', { errors: errors.array() });
+  const { name, sku, cost_price, sell_price, quantity, min_stock } = req.body;
+  await parts.insert({
+    name,
+    sku: sku || null,
+    cost_price: cost_price ? Number(cost_price) : 0,
+    sell_price: sell_price ? Number(sell_price) : 0,
+    quantity: quantity ? Number(quantity) : 0,
+    min_stock: min_stock ? Number(min_stock) : 0,
+    created_at: new Date()
+  });
+  res.redirect('/parts');
+});
+
+app.get('/parts/:id/edit', ensureAuth, async (req, res) => {
+  const id = req.params.id;
+  const p = await parts.findOne({ _id: id });
+  if (!p) return res.status(404).send('Peça não encontrada');
+  res.render('edit_part', { part: p });
+});
+
+app.post('/parts/:id/update', ensureAuth, [
+  check('name').notEmpty().withMessage('Nome obrigatório'),
+  check('sell_price').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Preço inválido'),
+  check('cost_price').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Custo inválido'),
+  check('quantity').optional({ checkFalsy: true }).isInt().withMessage('Quantidade inválida'),
+  check('min_stock').optional({ checkFalsy: true }).isInt().withMessage('Estoque mínimo inválido')
+], async (req, res) => {
+  const id = req.params.id;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const p = await parts.findOne({ _id: id });
+    return res.render('edit_part', { part: p, errors: errors.array() });
+  }
+  const { name, sku, cost_price, sell_price, quantity, min_stock } = req.body;
+  await parts.update({ _id: id }, { $set: {
+    name,
+    sku: sku || null,
+    cost_price: cost_price ? Number(cost_price) : 0,
+    sell_price: sell_price ? Number(sell_price) : 0,
+    quantity: quantity ? Number(quantity) : 0,
+    min_stock: min_stock ? Number(min_stock) : 0
+  }}, {});
+  res.redirect('/parts');
+});
+
+app.post('/parts/:id/delete', ensureAuth, async (req, res) => {
+  const id = req.params.id;
+  await parts.remove({ _id: id }, {});
+  res.redirect('/parts');
 });
 
 // ----- APPOINTMENTS -----

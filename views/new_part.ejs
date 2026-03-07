@@ -1,0 +1,49 @@
+<%- include('partials/header') %>
+
+<h2>Nova Peça</h2>
+
+<% if (typeof errors !== 'undefined' && errors) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      <% errors.forEach(e => { %><li><%= e.msg %></li><% }) %>
+    </ul>
+  </div>
+<% } %>
+
+<form method="post" action="/parts">
+  <div class="mb-3">
+    <label class="form-label">Nome</label>
+    <input name="name" class="form-control" required/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">SKU</label>
+    <input name="sku" class="form-control"/>
+  </div>
+  <div class="mb-3 row">
+    <div class="col">
+      <label class="form-label">Preço de custo (R$)</label>
+      <input name="cost_price" type="number" step="0.01" class="form-control"/>
+    </div>
+    <div class="col">
+      <label class="form-label">Preço de venda (R$)</label>
+      <input name="sell_price" type="number" step="0.01" class="form-control"/>
+    </div>
+  </div>
+  <div class="mb-3 row mt-2">
+    <div class="col">
+      <label class="form-label">Quantidade</label>
+      <input name="quantity" type="number" class="form-control" value="0"/>
+    </div>
+    <div class="col">
+      <label class="form-label">Estoque mínimo</label>
+      <input name="min_stock" type="number" class="form-control" value="0"/>
+    </div>
+  </div>
+
+  <div class="mt-3">
+    <button class="btn btn-primary">Criar peça</button>
+    <a class="btn btn-link" href="/parts">Cancelar</a>
+  </div>
+</form>
+
+<%- include('partials/footer') %>
