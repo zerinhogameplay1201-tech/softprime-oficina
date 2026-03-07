@@ -6,11 +6,23 @@
   <div class="alert alert-danger"><%= error %></div>
 <% } %>
 
+<!-- If opened from an appointment, show summary -->
+<% if (appointment) { %>
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5 class="card-title">Vinculada ao Agendamento: <small class="text-muted"><%= appointment._id %></small></h5>
+      <p class="mb-1"><strong>Cliente:</strong> <%= appointment._customer ? appointment._customer.name : '-' %></p>
+      <p class="mb-1"><strong>Veículo:</strong> <%= appointment._vehicle ? (appointment._vehicle.make + ' ' + appointment._vehicle.model + ' (' + (appointment._vehicle.plate || '-') + ')') : '-' %></p>
+      <p class="mb-0"><strong>Data agendada:</strong> <%= appointment.scheduled_at ? new Date(appointment.scheduled_at).toLocaleString() : '-' %></p>
+    </div>
+  </div>
+<% } %>
+
 <form method="post" action="/sales">
   <input type="hidden" name="appointment_id" value="<%= appointment_id || '' %>"/>
   <div class="mb-3">
     <label class="form-label">Cliente (opcional)</label>
-    <input name="customer_name" class="form-control" placeholder="Nome do cliente"/>
+    <input name="customer_name" class="form-control" placeholder="Nome do cliente" value="<%= appointment && appointment._customer ? appointment._customer.name : '' %>"/>
   </div>
 
   <div id="items-area">
@@ -49,7 +61,7 @@
 
   <div class="d-flex gap-2">
     <button class="btn btn-primary">Registrar venda</button>
-    <a class="btn btn-link" href="/sales">Cancelar</a>
+    <a class="btn btn-link" href="<%= appointment ? ('/appointments/' + appointment._id) : '/sales' %>">Cancelar</a>
   </div>
 </form>
 
@@ -60,7 +72,6 @@
     const tpl = document.querySelector('.item-line');
     const clone = tpl.cloneNode(true);
     clone.querySelectorAll('input, select').forEach(el => {
-      // clear values for new line
       if (el.tagName === 'SELECT') el.selectedIndex = 0;
       else el.value = el.name === 'qty' ? '1' : (el.name === 'unit_price' ? '0.00' : '');
     });
@@ -79,8 +90,8 @@
   function updateNames() {
     document.querySelectorAll('.item-line').forEach((line, idx) => {
       line.querySelectorAll('select, input').forEach(el => {
-        const base = el.name;
-        el.name = base.endsWith('[]') ? base : base + '[]';
+        const base = el.name.replace(/\[\]$/, '');
+        el.name = base + '[]';
       });
     });
   }

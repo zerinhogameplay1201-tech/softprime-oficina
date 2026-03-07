@@ -261,11 +261,166 @@ app.post('/services/:id/delete', ensureAuth, async (req, res) => {
   res.redirect('/services');
 });
 
+// ----- Appointments -----
+app.get('/appointments', async (req, res) => {
+  const q = req.query.q || '';
+  const page = req.query.page || 1;
+  const limit = req.query.limit || 20;
+  const appts = await appointments.find({}).sort({ scheduled_at: -1 });
+  const full = await Promise.all(appts.map(async a => {
+    const v = await vehicles.findOne({ _id: a.vehicle_id });
+    const s = a.service_id ? await services.findOne({ _id: a.service_id }) : null;
+    const c = v ? await customers.findOne({ _id: v.customer_id }) : null;
+    return {
+      ...a,
+      vehicle: v,
+      make: v ? v.make : '',
+      model: v ? v.model : '',
+      plate: v ? v.plate : '',
+      service_desc: s ? s.description : null,
+      customer_name: c ? c.name : ''
+    };
+  }));
+  const result = applySearchAndPagination(full, q, page, limit, ['make', 'model', 'plate', 'customer_name', 'service_desc', 'status']);
+  res.render('appointments', { appts: result.data, q, pagination: { total: result.total, page: result.page, pages: result.pages, limit: result.limit } });
+});
+
+app.get('/appointments/new', ensureAuth, async (req, res) => {
+  const vs = await vehicles.find({}).sort({ created_at: -1 });
+  const vehiclesWithOwners = await Promise.all(vs.map(async v => {
+    const c = await customers.findOne({ _id: v.customer_id });
+    return { ...v, customer_name: c ? c.name : '' };
+  }));
+  const ss = await services.find({}).sort({ description: 1 });
+  res.render('new_appointment', { vehicles: vehiclesWithOwners, services: ss });
+});
+
+app.post('/appointments', ensureAuth, [
+  check('vehicle_id').notEmpty().withMessage('Veículo obrigatório')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const vs = await vehicles.find({}).sort({ created_at: -1 });
+    const vehiclesWithOwners = await Promise.all(vs.map(async v => {
+      const c = await customers.findOne({ _id: v.customer_id });
+      return { ...v, customer_name: c ? c.name : '' };
+    }));
+    const ss = await services.find({}).sort({ description: 1 });
+    return res.render('new_appointment', { vehicles: vehiclesWithOwners, services: ss, errors: errors.array() });
+  }
+  const { vehicle_id, service_id, scheduled_at, notes, technician, total_price } = req.body;
+  await appointments.insert({
+    vehicle_id,
+    service_id: service_id || null,
+    scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
+    notes,
+    technician: technician || null,
+    total_price: total_price ? Number(total_price) : 0,
+    created_at: new Date(),
+    status: 'agendado'
+  });
+  res.redirect('/appointments');
+});
+
+app.get('/appointments/:id/edit', ensureAuth, async (req, res) => {
+  const id = req.params.id;
+  const a = await appointments.findOne({ _id: id });
+  if (!a) return res.status(404).send('Agendamento não encontrado');
+  const vs = await vehicles.find({}).sort({ created_at: -1 });
+  const vehiclesWithOwners = await Promise.all(vs.map(async v => {
+    const c = await customers.findOne({ _id: v.customer_id });
+    return { ...v, customer_name: c ? c.name : '' };
+  }));
+  const ss = await services.find({}).sort({ description: 1 });
+  res.render('edit_appointment', { appt: a, vehicles: vehiclesWithOwners, services: ss });
+});
+
+app.post('/appointments/:id/update', ensureAuth, async (req, res) => {
+  const id = req.params.id;
+  const { vehicle_id, service_id, scheduled_at, notes, status, technician, total_price } = req.body;
+  await appointments.update({ _id: id }, { $set: {
+    vehicle_id,
+    service_id: service_id || null,
+    scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
+    notes,
+    status: status || 'agendado',
+    technician: technician || null,
+    total_price: total_price ? Number(total_price) : 0
+  } }, {});
+  res.redirect('/appointments');
+});
+
+app.post('/appointments/:id/delete', ensureAuth, async (req, res) => {
+  const id = req.params.id;
+  await appointments.remove({ _id: id }, {});
+  res.redirect('/appointments');
+});
+
+// NEW: appointment detail page (shows linked sales and button to add pieces)
+app.get('/appointments/:id', ensureAuth, async (req, res) => {
+  const id = req.params.id;
+  const a = await appointments.findOne({ _id: id });
+  if (!a) return res.status(404).send('Agendamento não encontrado');
+  const v = a.vehicle_id ? await vehicles.findOne({ _id: a.vehicle_id }) : null;
+  const s = a.service_id ? await services.findOne({ _id: a.service_id }) : null;
+  const c = v ? await customers.findOne({ _id: v.customer_id }) : null;
+
+  // linked sales
+  const linkedSales = await sales.find({ appointment_id: id }).sort({ created_at: -1 });
+  const salesDetailed = await Promise.all((linkedSales || []).map(async sl => {
+    const items = await Promise.all((sl.items || []).map(async it => {
+      const p = await parts.findOne({ _id: it.part_id });
+      return { ...it, part_name: p ? p.name : '—', sku: p ? p.sku : '' };
+    }));
+    return { ...sl, items };
+  }));
+
+  const partsTotal = salesDetailed.reduce((acc, sl) => acc + Number(sl.total || 0), 0);
+  const servicePrice = s ? Number(s.price || 0) : 0;
+  const computedTotal = (Number(a.total_price || 0) || servicePrice) + partsTotal;
+
+  res.render('appointment_show', { appt: a, vehicle: v, service: s, customer: c, sales: salesDetailed, partsTotal, computedTotal });
+});
+
+// PDF: gera orçamento/recebível simples em PDF para um agendamento
+app.get('/appointments/:id/estimate', ensureAuth, async (req, res) => {
+  const id = req.params.id;
+  const a = await appointments.findOne({ _id: id });
+  if (!a) return res.status(404).send('Agendamento não encontrado');
+  const v = await vehicles.findOne({ _id: a.vehicle_id });
+  const s = a.service_id ? await services.findOne({ _id: a.service_id }) : null;
+  const c = v ? await customers.findOne({ _id: v.customer_id }) : null;
+
+  // cria PDF
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename=orcamento-${id}.pdf`);
+  doc.fontSize(20).text('Orçamento - Softprime Oficina', { align: 'center' });
+  doc.moveDown();
+  doc.fontSize(12).text(`Cliente: ${c ? c.name : '-'}`);
+  doc.text(`Telefone: ${c ? c.phone : '-'}`);
+  doc.text(`Email: ${c ? c.email : '-'}`);
+  doc.moveDown();
+  doc.text(`Veículo: ${v ? `${v.make} ${v.model} (${v.plate})` : '-'}`);
+  doc.text(`Serviço: ${s ? s.description : '-'}`);
+  doc.text(`Preço: R$ ${s ? (s.price||0).toFixed(2) : '0.00'}`);
+  doc.moveDown();
+  doc.text(`Data agendada: ${a.scheduled_at ? new Date(a.scheduled_at).toLocaleString() : '-'}`);
+  doc.moveDown();
+  doc.text('Observações:');
+  doc.text(a.notes || '-');
+  doc.end();
+  doc.pipe(res);
+});
+
 // ----- Parts (Peças) -----
 app.get('/parts', async (req, res) => {
   const q = req.query.q || '';
+  const low = req.query.low === '1';
   const all = await parts.find({}).sort({ created_at: -1 });
-  const filtered = q ? all.filter(p => (p.name||'').toLowerCase().includes(q.toLowerCase()) || (p.sku||'').toLowerCase().includes(q.toLowerCase())) : all;
+  let filtered = all;
+  if (low) filtered = all.filter(p => (p.quantity || 0) <= (p.min_stock || 0));
+  if (q) filtered = filtered.filter(p => (p.name||'').toLowerCase().includes(q.toLowerCase()) || (p.sku||'').toLowerCase().includes(q.toLowerCase()));
   res.render('parts', { parts: filtered, q });
 });
 
@@ -333,35 +488,97 @@ app.post('/parts/:id/delete', ensureAuth, async (req, res) => {
   res.redirect('/parts');
 });
 
-// ----- Purchases (existing) -----
-// ... (assume your purchases routes remain as implemented earlier) ...
-// For brevity, purchases routes are not duplicated here — keep your existing purchases routes.
+// ----- Purchases -----
+// (mantém suas rotas de purchases já implementadas)
 
-// ----- Sales (NOVO) -----
+app.get('/purchases', ensureAuth, async (req, res) => {
+  const all = await purchases.find({}).sort({ created_at: -1 });
+  res.render('purchases', { purchases: all });
+});
+
+app.get('/purchases/new', ensureAuth, async (req, res) => {
+  const allParts = await parts.find({}).sort({ name: 1 });
+  res.render('new_purchase', { parts: allParts });
+});
+
+app.post('/purchases', ensureAuth, async (req, res) => {
+  const supplier = req.body.supplier || '';
+  let { part_id, qty, unit_cost } = req.body;
+  if (!Array.isArray(part_id)) part_id = part_id ? [part_id] : [];
+  if (!Array.isArray(qty)) qty = qty ? [qty] : [];
+  if (!Array.isArray(unit_cost)) unit_cost = unit_cost ? [unit_cost] : [];
+  const items = [];
+  for (let i = 0; i < part_id.length; i++) {
+    const pid = part_id[i];
+    const q = Number(qty[i] || 0);
+    const uc = Number(unit_cost[i] || 0);
+    if (!pid || q <= 0) continue;
+    items.push({ part_id: pid, qty: q, unit_cost: uc });
+  }
+  if (items.length === 0) {
+    const allParts = await parts.find({}).sort({ name: 1 });
+    return res.render('new_purchase', { parts: allParts, error: 'Adicione ao menos um item com quantidade válida.' });
+  }
+  const total = items.reduce((s, it) => s + (it.qty * (it.unit_cost || 0)), 0);
+  const purchase = await purchases.insert({ supplier, items, total, created_at: new Date() });
+  for (const it of items) {
+    const p = await parts.findOne({ _id: it.part_id });
+    if (!p) continue;
+    const oldQty = Number(p.quantity || 0);
+    const oldCost = Number(p.cost_price || 0);
+    const addQty = Number(it.qty || 0);
+    const unitCost = Number(it.unit_cost || 0);
+    const newQty = oldQty + addQty;
+    const newCost = (oldQty * oldCost + addQty * unitCost) / (newQty || 1);
+    await parts.update({ _id: it.part_id }, { $set: { quantity: newQty, cost_price: newCost } }, {});
+  }
+  res.redirect('/purchases/' + purchase._id);
+});
+
+app.get('/purchases/:id', ensureAuth, async (req, res) => {
+  const id = req.params.id;
+  const p = await purchases.findOne({ _id: id });
+  if (!p) return res.status(404).send('Compra não encontrada');
+  const itemsDetailed = await Promise.all((p.items || []).map(async it => {
+    const part = await parts.findOne({ _id: it.part_id });
+    return { ...it, part_name: part ? part.name : '—', sku: part ? part.sku : '' };
+  }));
+  res.render('purchase_show', { purchase: p, items: itemsDetailed });
+});
+
+// ----- Sales (Vendas) -----
 // List sales
 app.get('/sales', ensureAuth, async (req, res) => {
   const all = await sales.find({}).sort({ created_at: -1 });
   res.render('sales', { sales: all });
 });
 
-// New sale form
+// New sale form (improved: if appointment_id provided, include appointment details)
 app.get('/sales/new', ensureAuth, async (req, res) => {
-  // optional appointment_id to prefill
   const allParts = await parts.find({}).sort({ name: 1 });
   const appointment_id = req.query.appointment_id || '';
-  res.render('new_sale', { parts: allParts, appointment_id, error: null });
+  let appointment = null;
+  if (appointment_id) {
+    appointment = await appointments.findOne({ _id: appointment_id });
+    if (appointment) {
+      const v = appointment.vehicle_id ? await vehicles.findOne({ _id: appointment.vehicle_id }) : null;
+      const c = v ? await customers.findOne({ _id: v.customer_id }) : null;
+      appointment._vehicle = v;
+      appointment._customer = c;
+    } else {
+      // invalid appointment id: ignore
+    }
+  }
+  res.render('new_sale', { parts: allParts, appointment_id, appointment, error: null });
 });
 
 // Create sale
 app.post('/sales', ensureAuth, async (req, res) => {
-  // expected arrays: part_id[], qty[], unit_price[]; optional appointment_id, customer_name etc
   const { appointment_id, customer_name, notes } = req.body;
   let { part_id, qty, unit_price } = req.body;
-
   if (!Array.isArray(part_id)) part_id = part_id ? [part_id] : [];
   if (!Array.isArray(qty)) qty = qty ? [qty] : [];
   if (!Array.isArray(unit_price)) unit_price = unit_price ? [unit_price] : [];
-
   const items = [];
   for (let i = 0; i < part_id.length; i++) {
     const pid = part_id[i];
@@ -370,33 +587,25 @@ app.post('/sales', ensureAuth, async (req, res) => {
     if (!pid || q <= 0) continue;
     items.push({ part_id: pid, qty: q, unit_price: up });
   }
-
   if (items.length === 0) {
     const allParts = await parts.find({}).sort({ name: 1 });
-    return res.render('new_sale', { parts: allParts, appointment_id: appointment_id || '', error: 'Adicione ao menos um item com quantidade válida.' });
+    return res.render('new_sale', { parts: allParts, appointment_id: appointment_id || '', appointment: null, error: 'Adicione ao menos um item com quantidade válida.' });
   }
-
-  // check stock availability for all items first
+  // check stock availability
   for (const it of items) {
     const p = await parts.findOne({ _id: it.part_id });
     if (!p) {
       const allParts = await parts.find({}).sort({ name: 1 });
-      return res.render('new_sale', { parts: allParts, appointment_id: appointment_id || '', error: `Peça não encontrada (id=${it.part_id}).` });
+      return res.render('new_sale', { parts: allParts, appointment_id: appointment_id || '', appointment: null, error: `Peça não encontrada (id=${it.part_id}).` });
     }
     const available = Number(p.quantity || 0);
     if (it.qty > available) {
       const allParts = await parts.find({}).sort({ name: 1 });
-      return res.render('new_sale', { parts: allParts, appointment_id: appointment_id || '', error: `Estoque insuficiente para "${p.name}". Disponível: ${available}, solicitado: ${it.qty}` });
+      return res.render('new_sale', { parts: allParts, appointment_id: appointment_id || '', appointment: null, error: `Estoque insuficiente para "${p.name}". Disponível: ${available}, solicitado: ${it.qty}` });
     }
   }
-
-  // compute total
   const total = items.reduce((s, it) => s + (it.qty * (it.unit_price || 0)), 0);
-
-  // insert sale
   const sale = await sales.insert({ appointment_id: appointment_id || null, customer_name: customer_name || null, items, total, notes: notes || null, created_at: new Date() });
-
-  // decrement parts quantities
   for (const it of items) {
     const p = await parts.findOne({ _id: it.part_id });
     if (!p) continue;
@@ -404,8 +613,6 @@ app.post('/sales', ensureAuth, async (req, res) => {
     const newQty = Math.max(0, oldQty - Number(it.qty || 0));
     await parts.update({ _id: it.part_id }, { $set: { quantity: newQty } }, {});
   }
-
-  // if linked to appointment, increment appointment.total_price (optional field)
   if (appointment_id) {
     const ap = await appointments.findOne({ _id: appointment_id });
     if (ap) {
@@ -413,7 +620,6 @@ app.post('/sales', ensureAuth, async (req, res) => {
       await appointments.update({ _id: appointment_id }, { $set: { total_price: prev + total } }, {});
     }
   }
-
   res.redirect('/sales/' + sale._id);
 });
 
@@ -422,7 +628,6 @@ app.get('/sales/:id', ensureAuth, async (req, res) => {
   const id = req.params.id;
   const s = await sales.findOne({ _id: id });
   if (!s) return res.status(404).send('Venda não encontrada');
-  // enrich items with part data
   const itemsDetailed = await Promise.all((s.items || []).map(async it => {
     const part = await parts.findOne({ _id: it.part_id });
     return { ...it, part_name: part ? part.name : '—', sku: part ? part.sku : '' };
