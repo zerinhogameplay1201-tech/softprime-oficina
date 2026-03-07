@@ -1,0 +1,33 @@
+<%- include('partials/header') %>
+
+<h2>Venda #<%= sale._id %></h2>
+<p><strong>Cliente:</strong> <%= sale.customer_name || '-' %></p>
+<p><strong>Vinculada ao agendamento:</strong> <%= sale.appointment_id || '-' %></p>
+<p><strong>Data:</strong> <%= sale.created_at ? new Date(sale.created_at).toLocaleString() : '-' %></p>
+
+<table class="table">
+  <thead><tr><th>Peça</th><th>SKU</th><th>Qtd</th><th>Preço unit.</th><th>Subtotal</th></tr></thead>
+  <tbody>
+    <% (items || []).forEach(it => { %>
+      <tr>
+        <td><%= it.part_name %></td>
+        <td><%= it.sku %></td>
+        <td><%= it.qty %></td>
+        <td>R$ <%= (it.unit_price||0).toFixed(2) %></td>
+        <td>R$ <%= ((it.qty||0)*(it.unit_price||0)).toFixed(2) %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="4" class="text-end"><strong>Total</strong></td>
+      <td><strong>R$ <%= (sale.total||0).toFixed(2) %></strong></td>
+    </tr>
+  </tfoot>
+</table>
+
+<p><strong>Observações:</strong> <%= sale.notes || '-' %></p>
+
+<a class="btn btn-link" href="/sales">Voltar</a>
+
+<%- include('partials/footer') %>
