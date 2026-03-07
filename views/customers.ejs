@@ -22,7 +22,13 @@
         <td><%= c.phone %></td>
         <td><%= c.email %></td>
         <td><%= c.created_at ? new Date(c.created_at).toLocaleString() : '-' %></td>
-        <td><a class="btn btn-sm btn-outline-primary" href="/customers/<%= c._id || c.id %>">Abrir</a></td>
+        <td>
+          <a class="btn btn-sm btn-outline-primary" href="/customers/<%= c._id || c.id %>">Abrir</a>
+          <a class="btn btn-sm btn-outline-secondary" href="/customers/<%= c._id || c.id %>/edit">Editar</a>
+          <form action="/customers/<%= c._id || c.id %>/delete" method="post" style="display:inline" onsubmit="return confirm('Excluir cliente? Esta ação não pode ser desfeita.')">
+            <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
+          </form>
+        </td>
       </tr>
     <% }) %>
   </tbody>

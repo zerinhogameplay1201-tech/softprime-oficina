@@ -1,0 +1,25 @@
+<%- include('partials/header') %>
+
+<h2>Editar Cliente</h2>
+<form method="post" action="/customers/<%= customer._id %>/update">
+  <div class="mb-3">
+    <label class="form-label">Nome</label>
+    <input name="name" required class="form-control" value="<%= customer.name %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Telefone</label>
+    <input name="phone" class="form-control" value="<%= customer.phone %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Email</label>
+    <input name="email" class="form-control" type="email" value="<%= customer.email %>"/>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Observações</label>
+    <textarea name="notes" class="form-control"><%= customer.notes %></textarea>
+  </div>
+  <button class="btn btn-primary">Salvar</button>
+  <a class="btn btn-link" href="/customers/<%= customer._id %>">Cancelar</a>
+</form>
+
+<%- include('partials/footer') %>

@@ -52,6 +52,30 @@ app.get('/customers/:id', async (req, res) => {
   res.render('customer_show', { customer, vehicles: cvs });
 });
 
+// ROTA: formulário de edição
+app.get('/customers/:id/edit', async (req, res) => {
+  const id = req.params.id;
+  const customer = await customers.findOne({ _id: id });
+  if (!customer) return res.status(404).send('Cliente não encontrado');
+  res.render('edit_customer', { customer });
+});
+
+// ROTA: atualiza cliente
+app.post('/customers/:id/update', async (req, res) => {
+  const id = req.params.id;
+  const { name, phone, email, notes } = req.body;
+  await customers.update({ _id: id }, { $set: { name, phone, email, notes } }, {});
+  res.redirect('/customers/' + id);
+});
+
+// ROTA: remove cliente
+app.post('/customers/:id/delete', async (req, res) => {
+  const id = req.params.id;
+  // opcional: antes de remover, remover também veículos/agenda relacionados (se desejar)
+  await customers.remove({ _id: id }, {});
+  res.redirect('/customers');
+});
+
 // ----- Vehicles -----
 app.get('/vehicles', async (req, res) => {
   const vs = await vehicles.find({}).sort({ created_at: -1 });

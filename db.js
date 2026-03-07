@@ -16,6 +16,8 @@ const appointmentsDb = new Datastore({ filename: path.join(dataDir, 'appointment
 // - customers.findOne(query) -> Promise<object>
 // - customers.insert(obj) -> Promise<object>
 // - customers.count(query) -> Promise<number>
+// - customers.update(query, update, opts) -> Promise<number>
+// - customers.remove(query, opts) -> Promise<number>
 function wrap(db) {
   return {
     find: (query = {}) => ({
@@ -35,6 +37,14 @@ function wrap(db) {
     count: (query = {}) =>
       new Promise((resolve, reject) => {
         db.count(query, (err, count) => (err ? reject(err) : resolve(count)));
+      }),
+    update: (query, updateObj, opts = {}) =>
+      new Promise((resolve, reject) => {
+        db.update(query, updateObj, opts, (err, numAffected) => (err ? reject(err) : resolve(numAffected)));
+      }),
+    remove: (query, opts = {}) =>
+      new Promise((resolve, reject) => {
+        db.remove(query, opts, (err, numRemoved) => (err ? reject(err) : resolve(numRemoved)));
       }),
     ensureIndex: (opts) => {
       try { db.ensureIndex(opts, () => {}); } catch(e) {}
