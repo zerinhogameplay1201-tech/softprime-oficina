@@ -1,44 +1,33 @@
-<!doctype html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Softprime Oficina</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css">
-  </head>
-  <body>
-    <div class="brand-bar">
-      <div class="container">
-        <div class="d-flex justify-content-between align-items-center">
-          <div><strong>Softprime Oficina</strong></div>
-          <div>
-            <% if (currentUser) { %>
-              <form method="post" action="/logout" style="display:inline"><button class="btn btn-sm btn-outline-light">Sair</button></form>
-            <% } else { %>
-              <a class="btn btn-sm btn-outline-light" href="/login">Entrar</a>
-            <% } %>
-          </div>
-        </div>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
+  <div class="container">
+    <a class="navbar-brand" href="/">Softprime Oficina</a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="mainNav">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="/customers">Clientes</a></li>
+        <li class="nav-item"><a class="nav-link" href="/vehicles">Veículos</a></li>
+        <li class="nav-item"><a class="nav-link" href="/services">Serviços</a></li>
+        <li class="nav-item"><a class="nav-link" href="/appointments">Agendamentos</a></li>
+      </ul>
+
+      <div class="d-flex align-items-center">
+        <form class="d-flex me-2" method="get" action="/customers">
+          <input class="form-control form-control-sm me-2" name="q" type="search" placeholder="Buscar clientes..." aria-label="Search">
+          <button class="btn btn-sm btn-outline-light" type="submit">Buscar</button>
+        </form>
+
+        <% if (currentUser) { %>
+          <form method="post" action="/logout" class="mb-0">
+            <button class="btn btn-sm btn-outline-light">Sair</button>
+          </form>
+        <% } else { %>
+          <a class="btn btn-sm btn-outline-light" href="/login">Entrar</a>
+        <% } %>
       </div>
     </div>
-
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
-      <div class="container">
-        <a class="navbar-brand" href="/">Softprime Oficina</a>
-        <div class="collapse navbar-collapse">
-          <ul class="navbar-nav me-auto">
-            <li class="nav-item"><a class="nav-link" href="/customers">Clientes</a></li>
-            <li class="nav-item"><a class="nav-link" href="/vehicles">Veículos</a></li>
-            <li class="nav-item"><a class="nav-link" href="/services">Serviços</a></li>
-            <li class="nav-item"><a class="nav-link" href="/appointments">Agendamentos</a></li>
-          </ul>
-          <form class="d-flex" method="get" action="/customers">
-            <input class="form-control form-control-sm me-2" name="q" type="search" placeholder="Buscar clientes..." aria-label="Search">
-            <button class="btn btn-sm btn-outline-light" type="submit">Buscar</button>
-          </form>
-        </div>
-      </div>
-    </nav>
-
-    <main class="container container-main">
+  </div>
+</nav>

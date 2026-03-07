@@ -157,3 +157,43 @@ body {
   .stat-value { font-size: 1.8rem; }
   .dashboard-hero { padding: 18px; }
 }
+
+/* Ajustes solicitados: remover duplicações e melhorar contraste */
+
+/* remove top brand-bar usage (no CSS needed) */
+
+/* central hero subtitle mais visível (branco) */
+.dashboard-hero .hero-subtitle {
+  color: rgba(255,255,255,0.95);
+  opacity: 1;
+  margin-top: 6px;
+  font-weight: 400;
+}
+
+/* navbar right area tweak (search + logout) */
+.navbar .form-control-sm {
+  width: 220px;
+}
+
+/* style do botão sair ao lado da busca */
+.navbar .btn-outline-light {
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+/* reduz repetição visual: hero não terá botões adicionais (já removidos) */
+
+/* garante contraste do painel com bordas suaves */
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+  align-items: center;
+  gap: 12px;
+}
+
+/* pequenas melhorias de espaçamento e responsividade */
+@media (max-width: 768px) {
+  .navbar .form-control-sm { width: 140px; }
+  .hero-subtitle { font-size: 0.95rem; }
+}
