@@ -1,0 +1,30 @@
+<%- include('partials/header') %>
+
+<h2>Compra #<%= purchase._id %></h2>
+<p><strong>Fornecedor:</strong> <%= purchase.supplier || '-' %></p>
+<p><strong>Data:</strong> <%= purchase.created_at ? new Date(purchase.created_at).toLocaleString() : '-' %></p>
+
+<table class="table">
+  <thead><tr><th>Peça</th><th>SKU</th><th>Qtd</th><th>Preço unit.</th><th>Subtotal</th></tr></thead>
+  <tbody>
+    <% (items || []).forEach(it => { %>
+      <tr>
+        <td><%= it.part_name %></td>
+        <td><%= it.sku %></td>
+        <td><%= it.qty %></td>
+        <td>R$ <%= (it.unit_cost||0).toFixed(2) %></td>
+        <td>R$ <%= ((it.qty||0)*(it.unit_cost||0)).toFixed(2) %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="4" class="text-end"><strong>Total</strong></td>
+      <td><strong>R$ <%= (purchase.total||0).toFixed(2) %></strong></td>
+    </tr>
+  </tfoot>
+</table>
+
+<a class="btn btn-link" href="/purchases">Voltar</a>
+
+<%- include('partials/footer') %>

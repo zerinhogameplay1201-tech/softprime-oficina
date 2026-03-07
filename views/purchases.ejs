@@ -1,0 +1,28 @@
+<%- include('partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Compras</h2>
+  <div>
+    <a href="/purchases/new" class="btn btn-primary btn-sm">Registrar compra</a>
+  </div>
+</div>
+
+<table class="table table-striped">
+  <thead>
+    <tr><th>ID</th><th>Fornecedor</th><th>Itens</th><th>Total</th><th>Data</th><th></th></tr>
+  </thead>
+  <tbody>
+    <% (purchases || []).forEach(p => { %>
+      <tr>
+        <td><%= p._id %></td>
+        <td><%= p.supplier || '-' %></td>
+        <td><%= (p.items || []).length %></td>
+        <td>R$ <%= (p.total||0).toFixed(2) %></td>
+        <td><%= p.created_at ? new Date(p.created_at).toLocaleString() : '-' %></td>
+        <td><a class="btn btn-sm btn-outline-secondary" href="/purchases/<%= p._id %>">Abrir</a></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('partials/footer') %>

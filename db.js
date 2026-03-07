@@ -10,7 +10,8 @@ const customersDb = new Datastore({ filename: path.join(dataDir, 'customers.db')
 const vehiclesDb = new Datastore({ filename: path.join(dataDir, 'vehicles.db'), autoload: true });
 const servicesDb = new Datastore({ filename: path.join(dataDir, 'services.db'), autoload: true });
 const appointmentsDb = new Datastore({ filename: path.join(dataDir, 'appointments.db'), autoload: true });
-const partsDb = new Datastore({ filename: path.join(dataDir, 'parts.db'), autoload: true }); // nova collection
+const partsDb = new Datastore({ filename: path.join(dataDir, 'parts.db'), autoload: true });
+const purchasesDb = new Datastore({ filename: path.join(dataDir, 'purchases.db'), autoload: true }); // purchases
 
 // helper que cria um objeto com API compatível com o que server.js usa:
 function wrap(db) {
@@ -51,7 +52,8 @@ const customers = wrap(customersDb);
 const vehicles = wrap(vehiclesDb);
 const services = wrap(servicesDb);
 const appointments = wrap(appointmentsDb);
-const parts = wrap(partsDb); // exporta parts
+const parts = wrap(partsDb);
+const purchases = wrap(purchasesDb);
 
 // índices
 customers.ensureIndex({ fieldName: 'created_at' });
@@ -62,11 +64,13 @@ appointments.ensureIndex({ fieldName: 'vehicle_id' });
 appointments.ensureIndex({ fieldName: 'scheduled_at' });
 parts.ensureIndex({ fieldName: 'sku' });
 parts.ensureIndex({ fieldName: 'created_at' });
+purchases.ensureIndex({ fieldName: 'created_at' });
 
 module.exports = {
   customers,
   vehicles,
   services,
   appointments,
-  parts
+  parts,
+  purchases
 };

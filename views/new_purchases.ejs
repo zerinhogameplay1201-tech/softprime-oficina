@@ -1,0 +1,84 @@
+<%- include('partials/header') %>
+
+<h2>Nova Compra</h2>
+
+<% if (typeof error !== 'undefined' && error) { %>
+  <div class="alert alert-danger"><%= error %></div>
+<% } %>
+
+<form method="post" action="/purchases" id="purchaseForm">
+  <div class="mb-3">
+    <label class="form-label">Fornecedor</label>
+    <input name="supplier" class="form-control" placeholder="Nome do fornecedor (opcional)"/>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Itens</label>
+    <div id="itemsContainer">
+      <div class="purchase-row row g-2 mb-2">
+        <div class="col-md-6">
+          <select name="part_id" class="form-select">
+            <option value="">-- selecione peça --</option>
+            <% (parts || []).forEach(p => { %>
+              <option value="<%= p._id %>"><%= p.name %> — SKU: <%= p.sku || '-' %> — Em estoque: <%= p.quantity || 0 %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <input name="qty" type="number" min="1" class="form-control" placeholder="Qtd" />
+        </div>
+        <div class="col-md-3">
+          <input name="unit_cost" type="number" step="0.01" class="form-control" placeholder="Custo unitário (R$)" />
+        </div>
+        <div class="col-md-1">
+          <button type="button" class="btn btn-outline-danger btn-sm remove-row">—</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-2">
+      <button type="button" id="addRow" class="btn btn-sm btn-outline-primary">Adicionar item</button>
+    </div>
+  </div>
+
+  <div>
+    <button class="btn btn-primary">Registrar compra</button>
+    <a class="btn btn-link" href="/purchases">Cancelar</a>
+  </div>
+</form>
+
+<script>
+  // clone & add rows logic
+  const addRowBtn = document.getElementById('addRow');
+  const itemsContainer = document.getElementById('itemsContainer');
+
+  addRowBtn.addEventListener('click', () => {
+    const first = itemsContainer.querySelector('.purchase-row');
+    if (!first) return;
+    const clone = first.cloneNode(true);
+    // clear values
+    clone.querySelectorAll('select,input').forEach(el => el.value = '');
+    itemsContainer.appendChild(clone);
+    attachRemoveHandlers();
+  });
+
+  function attachRemoveHandlers() {
+    itemsContainer.querySelectorAll('.remove-row').forEach(btn => {
+      btn.onclick = (e) => {
+        const rows = itemsContainer.querySelectorAll('.purchase-row');
+        if (rows.length <= 1) {
+          // clear fields instead of removing last
+          rows[0].querySelectorAll('select,input').forEach(el => el.value = '');
+          return;
+        }
+        btn.closest('.purchase-row').remove();
+      };
+    });
+  }
+  attachRemoveHandlers();
+
+  // ensure form sends arrays (name attributes already same for each row)
+  // no extra code needed; browser sends multiple inputs with same name as arrays
+</script>
+
+<%- include('partials/footer') %>
