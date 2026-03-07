@@ -1,0 +1,1222 @@
+*** Begin Patch
+*** Update File: db.js
+@@
+-const Datastore = require('nedb');
+-const path = require('path');
+-const fs = require('fs');
+-
+-const dataDir = path.join(__dirname, 'data');
+-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
+-
+-// cria datastores
+-const customersDb = new Datastore({ filename: path.join(dataDir, 'customers.db'), autoload: true });
+-const vehiclesDb = new Datastore({ filename: path.join(dataDir, 'vehicles.db'), autoload: true });
+-const servicesDb = new Datastore({ filename: path.join(dataDir, 'services.db'), autoload: true });
+-const appointmentsDb = new Datastore({ filename: path.join(dataDir, 'appointments.db'), autoload: true });
+-
+-// helper que cria um objeto com API compatível com o que server.js usa:
+-// - customers.find(query).sort({...}) -> Promise<array>
+-// - customers.findOne(query) -> Promise<object>
+-// - customers.insert(obj) -> Promise<object>
+-// - customers.count(query) -> Promise<number>
+-function wrap(db) {
+-  return {
+-    find: (query = {}) => ({
+-      sort: (sortObj = {}) =>
+-        new Promise((resolve, reject) => {
+-          db.find(query).sort(sortObj).exec((err, docs) => (err ? reject(err) : resolve(docs)));
+-        })
+-    }),
+-    findOne: (query = {}) =>
+-      new Promise((resolve, reject) => {
+-        db.findOne(query, (err, doc) => (err ? reject(err) : resolve(doc)));
+-      }),
+-    insert: (doc) =>
+-      new Promise((resolve, reject) => {
+-        db.insert(doc, (err, newDoc) => (err ? reject(err) : resolve(newDoc)));
+-      }),
+-    count: (query = {}) =>
+-      new Promise((resolve, reject) => {
+-        db.count(query, (err, count) => (err ? reject(err) : resolve(count)));
+-      }),
+-    ensureIndex: (opts) => {
+-      try { db.ensureIndex(opts, () => {}); } catch(e) {}
+-    }
+-  };
+-}
+-
+-const customers = wrap(customersDb);
+-const vehicles = wrap(vehiclesDb);
+-const services = wrap(servicesDb);
+-const appointments = wrap(appointmentsDb);
+-
+-// cria alguns índices básicos (silenciosos)
+-customers.ensureIndex({ fieldName: 'created_at' });
+-vehicles.ensureIndex({ fieldName: 'customer_id' });
+-vehicles.ensureIndex({ fieldName: 'created_at' });
+-services.ensureIndex({ fieldName: 'created_at' });
+-appointments.ensureIndex({ fieldName: 'vehicle_id' });
+-appointments.ensureIndex({ fieldName: 'scheduled_at' });
+-
+-module.exports = {
+-  customers,
+-  vehicles,
+-  services,
+-  appointments
+-};
++const Datastore = require('nedb');
++const path = require('path');
++const fs = require('fs');
++
++const dataDir = path.join(__dirname, 'data');
++if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
++
++// cria datastores
++const customersDb = new Datastore({ filename: path.join(dataDir, 'customers.db'), autoload: true });
++const vehiclesDb = new Datastore({ filename: path.join(dataDir, 'vehicles.db'), autoload: true });
++const servicesDb = new Datastore({ filename: path.join(dataDir, 'services.db'), autoload: true });
++const appointmentsDb = new Datastore({ filename: path.join(dataDir, 'appointments.db'), autoload: true });
++
++// helper que cria um objeto com API compatível com o que server.js usa:
++// - customers.find(query).sort({...}) -> Promise<array>
++// - customers.findOne(query) -> Promise<object>
++// - customers.insert(obj) -> Promise<object>
++// - customers.count(query) -> Promise<number>
++// - customers.update(query, update, opts) -> Promise<number>
++// - customers.remove(query, opts) -> Promise<number>
++function wrap(db) {
++  return {
++    find: (query = {}) => ({
++      sort: (sortObj = {}) =>
++        new Promise((resolve, reject) => {
++          db.find(query).sort(sortObj).exec((err, docs) => (err ? reject(err) : resolve(docs)));
++        })
++    }),
++    findOne: (query = {}) =>
++      new Promise((resolve, reject) => {
++        db.findOne(query, (err, doc) => (err ? reject(err) : resolve(doc)));
++      }),
++    insert: (doc) =>
++      new Promise((resolve, reject) => {
++        db.insert(doc, (err, newDoc) => (err ? reject(err) : resolve(newDoc)));
++      }),
++    count: (query = {}) =>
++      new Promise((resolve, reject) => {
++        db.count(query, (err, count) => (err ? reject(err) : resolve(count)));
++      }),
++    update: (query, updateObj, opts = {}) =>
++      new Promise((resolve, reject) => {
++        db.update(query, updateObj, opts, (err, numAffected) => (err ? reject(err) : resolve(numAffected)));
++      }),
++    remove: (query, opts = {}) =>
++      new Promise((resolve, reject) => {
++        db.remove(query, opts, (err, numRemoved) => (err ? reject(err) : resolve(numRemoved)));
++      }),
++    ensureIndex: (opts) => {
++      try { db.ensureIndex(opts, () => {}); } catch(e) {}
++    }
++  };
++}
++
++const customers = wrap(customersDb);
++const vehicles = wrap(vehiclesDb);
++const services = wrap(servicesDb);
++const appointments = wrap(appointmentsDb);
++
++// cria alguns índices básicos (silenciosos)
++customers.ensureIndex({ fieldName: 'created_at' });
++vehicles.ensureIndex({ fieldName: 'customer_id' });
++vehicles.ensureIndex({ fieldName: 'created_at' });
++services.ensureIndex({ fieldName: 'created_at' });
++appointments.ensureIndex({ fieldName: 'vehicle_id' });
++appointments.ensureIndex({ fieldName: 'scheduled_at' });
++
++module.exports = {
++  customers,
++  vehicles,
++  services,
++  appointments
++};
+*** End Patch
+*** Begin Patch
+*** Update File: server.js
+@@
+-const express = require('express');
+-const expressLayouts = require('express-ejs-layouts');
+-const path = require('path');
+-const bodyParser = require('body-parser');
+-const { customers, vehicles, services, appointments } = require('./db');
+-
+-const app = express();
+-const PORT = process.env.PORT || 3000;
+-
+-// views / ejs
+-app.set('views', path.join(__dirname, 'views'));
+-app.set('view engine', 'ejs');
+-
+-// habilita express-ejs-layouts (fornece <% layout('layout') -%> nas views)
+-app.use(expressLayouts);
+-app.set('layout', 'layout');
+-console.log('express-ejs-layouts habilitado');
+-
+-// middlewares
+-app.use(bodyParser.urlencoded({ extended: true }));
+-app.use(express.static(path.join(__dirname, 'public')));
+-
+-// Home
+-app.get('/', async (req, res) => {
+-  const totalCustomers = (await customers.count({})) || 0;
+-  const totalVehicles = (await vehicles.count({})) || 0;
+-  const totalAppointments = (await appointments.count({})) || 0;
+-  res.render('index', { totalCustomers, totalVehicles, totalAppointments });
+-});
+-
+-// ----- Customers -----
+-app.get('/customers', async (req, res) => {
+-  const all = await customers.find({}).sort({ created_at: -1 });
+-  res.render('customers', { customers: all });
+-});
+-
+-app.get('/customers/new', (req, res) => {
+-  res.render('new_customer');
+-});
+-
+-app.post('/customers', async (req, res) => {
+-  const { name, phone, email, notes } = req.body;
+-  await customers.insert({ name, phone, email, notes, created_at: new Date() });
+-  res.redirect('/customers');
+-});
+-
+-app.get('/customers/:id', async (req, res) => {
+-  const id = req.params.id;
+-  const customer = await customers.findOne({ _id: id });
+-  if (!customer) return res.status(404).send('Cliente não encontrado');
+-  const cvs = await vehicles.find({ customer_id: id }).sort({ created_at: -1 });
+-  res.render('customer_show', { customer, vehicles: cvs });
+-});
+-
+-// ----- Vehicles -----
+-app.get('/vehicles', async (req, res) => {
+-  const vs = await vehicles.find({}).sort({ created_at: -1 });
+-  // join customer name
+-  const list = await Promise.all(vs.map(async v => {
+-    const c = await customers.findOne({ _id: v.customer_id });
+-    return { ...v, customer_name: c ? c.name : '—' };
+-  }));
+-  res.render('vehicles', { vehicles: list });
+-});
+-
+-app.get('/vehicles/new', async (req, res) => {
+-  const cs = await customers.find({}).sort({ name: 1 });
+-  res.render('new_vehicle', { customers: cs });
+-});
+-
+-app.post('/vehicles', async (req, res) => {
+-  const { customer_id, make, model, year, plate, vin, notes } = req.body;
+-  await vehicles.insert({
+-    customer_id,
+-    make,
+-    model,
+-    year: year ? Number(year) : null,
+-    plate,
+-    vin,
+-    notes,
+-    created_at: new Date()
+-  });
+-  res.redirect('/vehicles');
+-});
+-
+-// ----- Services -----
+-app.get('/services', async (req, res) => {
+-  const all = await services.find({}).sort({ created_at: -1 });
+-  res.render('services', { services: all });
+-});
+-
+-app.get('/services/new', (req, res) => {
+-  res.render('new_service');
+-});
+-
+-app.post('/services', async (req, res) => {
+-  const { description, price } = req.body;
+-  await services.insert({ description, price: price ? Number(price) : 0, created_at: new Date() });
+-  res.redirect('/services');
+-});
+-
+-// ----- Appointments -----
+-app.get('/appointments', async (req, res) => {
+-  const appts = await appointments.find({}).sort({ scheduled_at: -1 });
+-  const full = await Promise.all(appts.map(async a => {
+-    const v = await vehicles.findOne({ _id: a.vehicle_id });
+-    const s = a.service_id ? await services.findOne({ _id: a.service_id }) : null;
+-    const c = v ? await customers.findOne({ _id: v.customer_id }) : null;
+-    return {
+-      ...a,
+-      vehicle: v,
+-      make: v ? v.make : '',
+-      model: v ? v.model : '',
+-      plate: v ? v.plate : '',
+-      service_desc: s ? s.description : null,
+-      customer_name: c ? c.name : ''
+-    };
+-  }));
+-  res.render('appointments', { appts: full });
+-});
+-
+-app.get('/appointments/new', async (req, res) => {
+-  const vs = await vehicles.find({}).sort({ created_at: -1 });
+-  const vehiclesWithOwners = await Promise.all(vs.map(async v => {
+-    const c = await customers.findOne({ _id: v.customer_id });
+-    return { ...v, customer_name: c ? c.name : '' };
+-  }));
+-  const ss = await services.find({}).sort({ description: 1 });
+-  res.render('new_appointment', { vehicles: vehiclesWithOwners, services: ss });
+-});
+-
+-app.post('/appointments', async (req, res) => {
+-  const { vehicle_id, service_id, scheduled_at, notes } = req.body;
+-  await appointments.insert({
+-    vehicle_id,
+-    service_id: service_id || null,
+-    scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
+-    notes,
+-    created_at: new Date(),
+-    status: 'agendado'
+-  });
+-  res.redirect('/appointments');
+-});
+-
+-// Static fallback
+-app.use((req, res) => res.status(404).send('Página não encontrada'));
+-
+-app.listen(PORT, () => {
+-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+-});
++const express = require('express');
++const expressLayouts = require('express-ejs-layouts');
++const path = require('path');
++const bodyParser = require('body-parser');
++const session = require('express-session');
++const { check, validationResult } = require('express-validator');
++const PDFDocument = require('pdfkit');
++const fs = require('fs');
++const { customers, vehicles, services, appointments } = require('./db');
++
++const app = express();
++const PORT = process.env.PORT || 3000;
++
++// simples credenciais (troque para variáveis de ambiente em produção)
++const ADMIN_USER = process.env.ADMIN_USER || 'admin';
++const ADMIN_PASS = process.env.ADMIN_PASS || 'secret';
++
++// views / ejs
++app.set('views', path.join(__dirname, 'views'));
++app.set('view engine', 'ejs');
++
++// habilita express-ejs-layouts (opcional, usamos partials mas mantemos)
++// app.use(expressLayouts);
++// app.set('layout', 'layout');
++
++// middlewares
++app.use(bodyParser.urlencoded({ extended: true }));
++app.use(express.static(path.join(__dirname, 'public')));
++app.use(session({
++  secret: process.env.SESSION_SECRET || 'troque_para_algo_secreto',
++  resave: false,
++  saveUninitialized: false,
++}));
++
++// helper de autenticação
++function ensureAuth(req, res, next) {
++  if (req.session && req.session.user === ADMIN_USER) return next();
++  return res.redirect('/login?next=' + encodeURIComponent(req.originalUrl));
++}
++
++// expose auth info to views
++app.use((req, res, next) => {
++  res.locals.currentUser = req.session && req.session.user;
++  next();
++});
++
++// ---- Auth routes ----
++app.get('/login', (req, res) => {
++  res.render('login', { error: null, next: req.query.next || '/' });
++});
++
++app.post('/login', (req, res) => {
++  const { user, pass, next } = req.body;
++  if (user === ADMIN_USER && pass === ADMIN_PASS) {
++    req.session.user = ADMIN_USER;
++    return res.redirect(next || '/');
++  }
++  res.render('login', { error: 'Usuário ou senha inválidos', next: next || '/' });
++});
++
++app.post('/logout', (req, res) => {
++  req.session.destroy(() => res.redirect('/login'));
++});
++
++// ---- Home ----
++app.get('/', async (req, res) => {
++  const totalCustomers = (await customers.count({})) || 0;
++  const totalVehicles = (await vehicles.count({})) || 0;
++  const totalAppointments = (await appointments.count({})) || 0;
++  res.render('index', { totalCustomers, totalVehicles, totalAppointments });
++});
++
++// ---- Utilities: search + paginate in-memory (ok para MVP) ----
++function applySearchAndPagination(list = [], q, page = 1, limit = 20, fields = []) {
++  let filtered = list;
++  if (q) {
++    const qq = q.toLowerCase();
++    filtered = list.filter(item => {
++      return fields.some(f => {
++        const v = (item[f] || '').toString().toLowerCase();
++        return v.includes(qq);
++      });
++    });
++  }
++  const total = filtered.length;
++  page = Number(page) || 1;
++  limit = Number(limit) || 20;
++  const start = (page - 1) * limit;
++  const paged = filtered.slice(start, start + limit);
++  return { data: paged, total, page, limit, pages: Math.ceil(total / limit) };
++}
++
++// ----- CUSTOMERS (existing + edit/delete already added earlier) -----
++// GET /customers (list with search/pagination)
++app.get('/customers', async (req, res) => {
++  const q = req.query.q || '';
++  const page = req.query.page || 1;
++  const limit = req.query.limit || 20;
++  const all = await customers.find({}).sort({ created_at: -1 });
++  const result = applySearchAndPagination(all, q, page, limit, ['name', 'phone', 'email']);
++  res.render('customers', { customers: result.data, q, pagination: { total: result.total, page: result.page, pages: result.pages, limit: result.limit } });
++});
++
++// other customer routes (create, show, new, edit, update, delete) kept as before:
++app.get('/customers/new', ensureAuth, (req, res) => {
++  res.render('new_customer');
++});
++
++app.post('/customers',
++  ensureAuth,
++  [ check('name').notEmpty().withMessage('Nome obrigatório') ],
++  async (req, res) => {
++    const errors = validationResult(req);
++    if (!errors.isEmpty()) return res.render('new_customer', { errors: errors.array() });
++    const { name, phone, email, notes } = req.body;
++    await customers.insert({ name, phone, email, notes, created_at: new Date() });
++    res.redirect('/customers');
++  }
++);
++
++app.get('/customers/:id', async (req, res) => {
++  const id = req.params.id;
++  const customer = await customers.findOne({ _id: id });
++  if (!customer) return res.status(404).send('Cliente não encontrado');
++  const cvs = await vehicles.find({ customer_id: id }).sort({ created_at: -1 });
++  res.render('customer_show', { customer, vehicles: cvs });
++});
++
++app.get('/customers/:id/edit', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  const customer = await customers.findOne({ _id: id });
++  if (!customer) return res.status(404).send('Cliente não encontrado');
++  res.render('edit_customer', { customer });
++});
++
++app.post('/customers/:id/update', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  const { name, phone, email, notes } = req.body;
++  await customers.update({ _id: id }, { $set: { name, phone, email, notes } }, {});
++  res.redirect('/customers/' + id);
++});
++
++app.post('/customers/:id/delete', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  await customers.remove({ _id: id }, {});
++  res.redirect('/customers');
++});
++
++// ----- VEHICLES (CRUD + search/pagination) -----
++app.get('/vehicles', async (req, res) => {
++  const q = req.query.q || '';
++  const page = req.query.page || 1;
++  const limit = req.query.limit || 20;
++  const vs = await vehicles.find({}).sort({ created_at: -1 });
++  const list = await Promise.all(vs.map(async v => {
++    const c = await customers.findOne({ _id: v.customer_id });
++    return { ...v, customer_name: c ? c.name : '—' };
++  }));
++  const result = applySearchAndPagination(list, q, page, limit, ['plate', 'make', 'model', 'customer_name']);
++  res.render('vehicles', { vehicles: result.data, q, pagination: { total: result.total, page: result.page, pages: result.pages, limit: result.limit } });
++});
++
++app.get('/vehicles/new', ensureAuth, async (req, res) => {
++  const cs = await customers.find({}).sort({ name: 1 });
++  res.render('new_vehicle', { customers: cs });
++});
++
++app.post('/vehicles', ensureAuth, [
++  check('customer_id').notEmpty().withMessage('Cliente obrigatório'),
++  check('year').optional({ checkFalsy: true }).isInt().withMessage('Ano inválido')
++], async (req, res) => {
++  const errors = validationResult(req);
++  if (!errors.isEmpty()) {
++    const cs = await customers.find({}).sort({ name: 1 });
++    return res.render('new_vehicle', { customers: cs, errors: errors.array() });
++  }
++  const { customer_id, make, model, year, plate, vin, notes } = req.body;
++  await vehicles.insert({
++    customer_id,
++    make,
++    model,
++    year: year ? Number(year) : null,
++    plate,
++    vin,
++    notes,
++    created_at: new Date()
++  });
++  res.redirect('/vehicles');
++});
++
++app.get('/vehicles/:id/edit', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  const v = await vehicles.findOne({ _id: id });
++  if (!v) return res.status(404).send('Veículo não encontrado');
++  const cs = await customers.find({}).sort({ name: 1 });
++  res.render('edit_vehicle', { vehicle: v, customers: cs });
++});
++
++app.post('/vehicles/:id/update', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  const { customer_id, make, model, year, plate, vin, notes } = req.body;
++  await vehicles.update({ _id: id }, { $set: { customer_id, make, model, year: year ? Number(year) : null, plate, vin, notes } }, {});
++  res.redirect('/vehicles');
++});
++
++app.post('/vehicles/:id/delete', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  await vehicles.remove({ _id: id }, {});
++  res.redirect('/vehicles');
++});
++
++// ----- SERVICES (CRUD + search/pagination) -----
++app.get('/services', async (req, res) => {
++  const q = req.query.q || '';
++  const page = req.query.page || 1;
++  const limit = req.query.limit || 20;
++  const all = await services.find({}).sort({ created_at: -1 });
++  const result = applySearchAndPagination(all, q, page, limit, ['description']);
++  res.render('services', { services: result.data, q, pagination: { total: result.total, page: result.page, pages: result.pages, limit: result.limit } });
++});
++
++app.get('/services/new', ensureAuth, (req, res) => {
++  res.render('new_service');
++});
++
++app.post('/services', ensureAuth, [
++  check('description').notEmpty().withMessage('Descrição obrigatória'),
++  check('price').optional({ checkFalsy: true }).isFloat({ min: 0 }).withMessage('Preço inválido')
++], async (req, res) => {
++  const errors = validationResult(req);
++  if (!errors.isEmpty()) return res.render('new_service', { errors: errors.array() });
++  const { description, price } = req.body;
++  await services.insert({ description, price: price ? Number(price) : 0, created_at: new Date() });
++  res.redirect('/services');
++});
++
++app.get('/services/:id/edit', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  const s = await services.findOne({ _id: id });
++  if (!s) return res.status(404).send('Serviço não encontrado');
++  res.render('edit_service', { service: s });
++});
++
++app.post('/services/:id/update', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  const { description, price } = req.body;
++  await services.update({ _id: id }, { $set: { description, price: price ? Number(price) : 0 } }, {});
++  res.redirect('/services');
++});
++
++app.post('/services/:id/delete', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  await services.remove({ _id: id }, {});
++  res.redirect('/services');
++});
++
++// ----- APPOINTMENTS (CRUD + search/pagination + PDF) -----
++app.get('/appointments', async (req, res) => {
++  const q = req.query.q || '';
++  const page = req.query.page || 1;
++  const limit = req.query.limit || 20;
++  const appts = await appointments.find({}).sort({ scheduled_at: -1 });
++  const full = await Promise.all(appts.map(async a => {
++    const v = await vehicles.findOne({ _id: a.vehicle_id });
++    const s = a.service_id ? await services.findOne({ _id: a.service_id }) : null;
++    const c = v ? await customers.findOne({ _id: v.customer_id }) : null;
++    return {
++      ...a,
++      vehicle: v,
++      make: v ? v.make : '',
++      model: v ? v.model : '',
++      plate: v ? v.plate : '',
++      service_desc: s ? s.description : null,
++      customer_name: c ? c.name : ''
++    };
++  }));
++  const result = applySearchAndPagination(full, q, page, limit, ['make', 'model', 'plate', 'customer_name', 'service_desc', 'status']);
++  res.render('appointments', { appts: result.data, q, pagination: { total: result.total, page: result.page, pages: result.pages, limit: result.limit } });
++});
++
++app.get('/appointments/new', ensureAuth, async (req, res) => {
++  const vs = await vehicles.find({}).sort({ created_at: -1 });
++  const vehiclesWithOwners = await Promise.all(vs.map(async v => {
++    const c = await customers.findOne({ _id: v.customer_id });
++    return { ...v, customer_name: c ? c.name : '' };
++  }));
++  const ss = await services.find({}).sort({ description: 1 });
++  res.render('new_appointment', { vehicles: vehiclesWithOwners, services: ss });
++});
++
++app.post('/appointments', ensureAuth, [
++  check('vehicle_id').notEmpty().withMessage('Veículo obrigatório')
++], async (req, res) => {
++  const errors = validationResult(req);
++  if (!errors.isEmpty()) {
++    const vs = await vehicles.find({}).sort({ created_at: -1 });
++    const vehiclesWithOwners = await Promise.all(vs.map(async v => {
++      const c = await customers.findOne({ _id: v.customer_id });
++      return { ...v, customer_name: c ? c.name : '' };
++    }));
++    const ss = await services.find({}).sort({ description: 1 });
++    return res.render('new_appointment', { vehicles: vehiclesWithOwners, services: ss, errors: errors.array() });
++  }
++  const { vehicle_id, service_id, scheduled_at, notes } = req.body;
++  await appointments.insert({
++    vehicle_id,
++    service_id: service_id || null,
++    scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
++    notes,
++    created_at: new Date(),
++    status: 'agendado'
++  });
++  res.redirect('/appointments');
++});
++
++app.get('/appointments/:id/edit', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  const a = await appointments.findOne({ _id: id });
++  if (!a) return res.status(404).send('Agendamento não encontrado');
++  const vs = await vehicles.find({}).sort({ created_at: -1 });
++  const vehiclesWithOwners = await Promise.all(vs.map(async v => {
++    const c = await customers.findOne({ _id: v.customer_id });
++    return { ...v, customer_name: c ? c.name : '' };
++  }));
++  const ss = await services.find({}).sort({ description: 1 });
++  res.render('edit_appointment', { appt: a, vehicles: vehiclesWithOwners, services: ss });
++});
++
++app.post('/appointments/:id/update', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  const { vehicle_id, service_id, scheduled_at, notes, status } = req.body;
++  await appointments.update({ _id: id }, { $set: {
++    vehicle_id,
++    service_id: service_id || null,
++    scheduled_at: scheduled_at ? new Date(scheduled_at) : null,
++    notes,
++    status: status || 'agendado'
++  } }, {});
++  res.redirect('/appointments');
++});
++
++app.post('/appointments/:id/delete', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  await appointments.remove({ _id: id }, {});
++  res.redirect('/appointments');
++});
++
++// PDF: gera orçamento/recebível simples em PDF para um agendamento
++app.get('/appointments/:id/estimate', ensureAuth, async (req, res) => {
++  const id = req.params.id;
++  const a = await appointments.findOne({ _id: id });
++  if (!a) return res.status(404).send('Agendamento não encontrado');
++  const v = await vehicles.findOne({ _id: a.vehicle_id });
++  const s = a.service_id ? await services.findOne({ _id: a.service_id }) : null;
++  const c = v ? await customers.findOne({ _id: v.customer_id }) : null;
++
++  // cria PDF
++  const doc = new PDFDocument({ size: 'A4', margin: 50 });
++  res.setHeader('Content-Type', 'application/pdf');
++  res.setHeader('Content-Disposition', `inline; filename=orcamento-${id}.pdf`);
++  doc.fontSize(20).text('Orçamento - Softprime Oficina', { align: 'center' });
++  doc.moveDown();
++  doc.fontSize(12).text(`Cliente: ${c ? c.name : '-'}`);
++  doc.text(`Telefone: ${c ? c.phone : '-'}`);
++  doc.text(`Email: ${c ? c.email : '-'}`);
++  doc.moveDown();
++  doc.text(`Veículo: ${v ? `${v.make} ${v.model} (${v.plate})` : '-'}`);
++  doc.text(`Serviço: ${s ? s.description : '-'}`);
++  doc.text(`Preço: R$ ${s ? (s.price||0).toFixed(2) : '0.00'}`);
++  doc.moveDown();
++  doc.text(`Data agendada: ${a.scheduled_at ? new Date(a.scheduled_at).toLocaleString() : '-'}`);
++  doc.moveDown();
++  doc.text('Observações:');
++  doc.text(a.notes || '-');
++  doc.end();
++  doc.pipe(res);
++});
++
++// Static fallback
++app.use((req, res) => res.status(404).send('Página não encontrada'));
++
++app.listen(PORT, () => {
++  console.log(`Servidor rodando em http://localhost:${PORT}`);
++});
+*** End Patch
+*** Begin Patch
+*** Add File: views/partials/header.ejs
++<!doctype html>
++<html lang="pt-BR">
++  <head>
++    <meta charset="utf-8" />
++    <meta name="viewport" content="width=device-width, initial-scale=1" />
++    <title>Softprime Oficina</title>
++    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
++    <link rel="stylesheet" href="/style.css">
++  </head>
++  <body>
++    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
++      <div class="container">
++        <a class="navbar-brand" href="/">Softprime Oficina</a>
++        <div class="collapse navbar-collapse">
++          <ul class="navbar-nav me-auto">
++            <li class="nav-item"><a class="nav-link" href="/customers">Clientes</a></li>
++            <li class="nav-item"><a class="nav-link" href="/vehicles">Veículos</a></li>
++            <li class="nav-item"><a class="nav-link" href="/services">Serviços</a></li>
++            <li class="nav-item"><a class="nav-link" href="/appointments">Agendamentos</a></li>
++          </ul>
++          <ul class="navbar-nav">
++            <% if (currentUser) { %>
++              <li class="nav-item"><form method="post" action="/logout"><button class="btn btn-sm btn-outline-light">Sair</button></form></li>
++            <% } else { %>
++              <li class="nav-item"><a class="nav-link" href="/login">Entrar</a></li>
++            <% } %>
++          </ul>
++        </div>
++      </div>
++    </nav>
++
++    <main class="container">
++
+*** End Patch
+*** Begin Patch
+*** Add File: views/partials/footer.ejs
++    </main>
++
++    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
++  </body>
++</html>
++
+*** End Patch
+*** Begin Patch
+*** Add File: views/login.ejs
++<!doctype html>
++<html>
++  <head>
++    <meta charset="utf-8"/>
++    <title>Login - Softprime Oficina</title>
++    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
++  </head>
++  <body class="p-5">
++    <div class="container" style="max-width:420px">
++      <h3>Login</h3>
++      <% if (error) { %>
++        <div class="alert alert-danger"><%= error %></div>
++      <% } %>
++      <form method="post" action="/login">
++        <input type="hidden" name="next" value="<%= next %>"/>
++        <div class="mb-3">
++          <label class="form-label">Usuário</label>
++          <input name="user" class="form-control" autofocus/>
++        </div>
++        <div class="mb-3">
++          <label class="form-label">Senha</label>
++          <input type="password" name="pass" class="form-control"/>
++        </div>
++        <button class="btn btn-primary">Entrar</button>
++      </form>
++    </div>
++  </body>
++</html>
++
+*** End Patch
+*** Begin Patch
+*** Add File: views/edit_customer.ejs
++<%- include('partials/header') %>
++
++<h2>Editar Cliente</h2>
++<form method="post" action="/customers/<%= customer._id %>/update">
++  <div class="mb-3">
++    <label class="form-label">Nome</label>
++    <input name="name" required class="form-control" value="<%= customer.name %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Telefone</label>
++    <input name="phone" class="form-control" value="<%= customer.phone %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Email</label>
++    <input name="email" class="form-control" type="email" value="<%= customer.email %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Observações</label>
++    <textarea name="notes" class="form-control"><%= customer.notes %></textarea>
++  </div>
++  <button class="btn btn-primary">Salvar</button>
++  <a class="btn btn-link" href="/customers/<%= customer._id %>">Cancelar</a>
++</form>
++
++<%- include('partials/footer') %>
++
+*** End Patch
+*** Begin Patch
+*** Add File: views/edit_vehicle.ejs
++<%- include('partials/header') %>
++
++<h2>Editar Veículo</h2>
++<form method="post" action="/vehicles/<%= vehicle._id %>/update">
++  <div class="mb-3">
++    <label class="form-label">Cliente</label>
++    <select name="customer_id" class="form-select" required>
++      <% (customers || []).forEach(c => { %>
++        <option value="<%= c._id %>" <%= c._id === vehicle.customer_id ? 'selected' : '' %>><%= c.name %></option>
++      <% }) %>
++    </select>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Marca</label>
++    <input name="make" class="form-control" value="<%= vehicle.make %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Modelo</label>
++    <input name="model" class="form-control" value="<%= vehicle.model %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Ano</label>
++    <input name="year" type="number" class="form-control" value="<%= vehicle.year %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Placa</label>
++    <input name="plate" class="form-control" value="<%= vehicle.plate %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">VIN</label>
++    <input name="vin" class="form-control" value="<%= vehicle.vin %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Observações</label>
++    <textarea name="notes" class="form-control"><%= vehicle.notes %></textarea>
++  </div>
++  <button class="btn btn-primary">Salvar</button>
++  <a class="btn btn-link" href="/vehicles">Cancelar</a>
++</form>
++
++<%- include('partials/footer') %>
++
+*** End Patch
+*** Begin Patch
+*** Add File: views/edit_service.ejs
++<%- include('partials/header') %>
++
++<h2>Editar Serviço</h2>
++<form method="post" action="/services/<%= service._id %>/update">
++  <div class="mb-3">
++    <label class="form-label">Descrição</label>
++    <input name="description" class="form-control" value="<%= service.description %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Preço (R$)</label>
++    <input name="price" type="number" step="0.01" class="form-control" value="<%= service.price %>"/>
++  </div>
++  <button class="btn btn-primary">Salvar</button>
++  <a class="btn btn-link" href="/services">Cancelar</a>
++</form>
++
++<%- include('partials/footer') %>
++
+*** End Patch
+*** Begin Patch
+*** Add File: views/edit_appointment.ejs
++<%- include('partials/header') %>
++
++<h2>Editar Agendamento</h2>
++<form method="post" action="/appointments/<%= appt._id %>/update">
++  <div class="mb-3">
++    <label class="form-label">Veículo</label>
++    <select name="vehicle_id" class="form-select" required>
++      <% (vehicles || []).forEach(v => { %>
++        <option value="<%= v._id %>" <%= v._id === appt.vehicle_id ? 'selected' : '' %>><%= v.customer_name %> — <%= v.plate %> — <%= v.make %> <%= v.model %></option>
++      <% }) %>
++    </select>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Serviço</label>
++    <select name="service_id" class="form-select">
++      <option value="">-- nenhum --</option>
++      <% (services || []).forEach(s => { %>
++        <option value="<%= s._id %>" <%= s._id === appt.service_id ? 'selected' : '' %>><%= s.description %> — R$ <%= (s.price||0).toFixed(2) %></option>
++      <% }) %>
++    </select>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Data e hora</label>
++    <input name="scheduled_at" type="datetime-local" class="form-control" value="<%= appt.scheduled_at ? (new Date(appt.scheduled_at)).toISOString().slice(0,16) : '' %>"/>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Status</label>
++    <select name="status" class="form-select">
++      <option value="agendado" <%= appt.status === 'agendado' ? 'selected' : '' %>>agendado</option>
++      <option value="realizado" <%= appt.status === 'realizado' ? 'selected' : '' %>>realizado</option>
++      <option value="cancelado" <%= appt.status === 'cancelado' ? 'selected' : '' %>>cancelado</option>
++    </select>
++  </div>
++  <div class="mb-3">
++    <label class="form-label">Observações</label>
++    <textarea name="notes" class="form-control"><%= appt.notes %></textarea>
++  </div>
++  <button class="btn btn-primary">Salvar</button>
++  <a class="btn btn-link" href="/appointments">Cancelar</a>
++</form>
++
++<%- include('partials/footer') %>
++
+*** End Patch
+*** Begin Patch
+*** Update File: views/services.ejs
+@@
+-<%- include('partials/header') %>
+-
+-<div class="d-flex justify-content-between mb-3">
+-  <h2>Serviços</h2>
+-  <a class="btn btn-success" href="/services/new">Novo serviço</a>
+-</div>
+-
+-<table class="table table-striped">
+-  <thead>
+-    <tr><th>Descrição</th><th>Preço</th><th>Criado</th></tr>
+-  </thead>
+-  <tbody>
+-    <% (services || []).forEach(s => { %>
+-      <tr>
+-        <td><%= s.description %></td>
+-        <td>R$ <%= (s.price||0).toFixed(2) %></td>
+-        <td><%= s.created_at ? new Date(s.created_at).toLocaleString() : '-' %></td>
+-      </tr>
+-    <% }) %>
+-  </tbody>
+-</table>
+-
+-<%- include('partials/footer') %>
++<%- include('partials/header') %>
++
++<div class="d-flex justify-content-between mb-3">
++  <h2>Serviços</h2>
++  <a class="btn btn-success" href="/services/new">Novo serviço</a>
++</div>
++
++<form class="mb-3 row" method="get" action="/services">
++  <div class="col-auto">
++    <input name="q" value="<%= q || '' %>" class="form-control" placeholder="Pesquisar serviços..."/>
++  </div>
++  <div class="col-auto">
++    <button class="btn btn-secondary">Buscar</button>
++  </div>
++</form>
++
++<table class="table table-striped">
++  <thead>
++    <tr><th>Descrição</th><th>Preço</th><th>Criado</th><th></th></tr>
++  </thead>
++  <tbody>
++    <% (services || []).forEach(s => { %>
++      <tr>
++        <td><%= s.description %></td>
++        <td>R$ <%= (s.price||0).toFixed(2) %></td>
++        <td><%= s.created_at ? new Date(s.created_at).toLocaleString() : '-' %></td>
++        <td>
++          <a class="btn btn-sm btn-outline-secondary" href="/services/<%= s._id %>/edit">Editar</a>
++          <form action="/services/<%= s._id %>/delete" method="post" style="display:inline" onsubmit="return confirm('Excluir serviço?')">
++            <button class="btn btn-sm btn-outline-danger">Excluir</button>
++          </form>
++        </td>
++      </tr>
++    <% }) %>
++  </tbody>
++</table>
++
++<%- include('partials/footer') %>
+*** End Patch
+*** Begin Patch
+*** Update File: views/customers.ejs
+@@
+-<%- include('partials/header') %>
+-
+-<div class="d-flex justify-content-between mb-3">
+-  <h2>Clientes</h2>
+-  <a class="btn btn-success" href="/customers/new">Novo cliente</a>
+-</div>
+-
+-<table class="table table-striped">
+-  <thead>
+-    <tr>
+-      <th>Nome</th>
+-      <th>Telefone</th>
+-      <th>Email</th>
+-      <th>Criado</th>
+-      <th></th>
+-    </tr>
+-  </thead>
+-  <tbody>
+-    <% (customers || []).forEach(c => { %>
+-      <tr>
+-        <td><a href="/customers/<%= c._id || c.id %>"><%= c.name %></a></td>
+-        <td><%= c.phone %></td>
+-        <td><%= c.email %></td>
+-        <td><%= c.created_at ? new Date(c.created_at).toLocaleString() : '-' %></td>
+-        <td><a class="btn btn-sm btn-outline-primary" href="/customers/<%= c._id || c.id %>">Abrir</a></td>
+-      </tr>
+-    <% }) %>
+-  </tbody>
+-</table>
+-
+-<%- include('partials/footer') %>
++<%- include('partials/header') %>
++
++<div class="d-flex justify-content-between mb-3">
++  <h2>Clientes</h2>
++  <a class="btn btn-success" href="/customers/new">Novo cliente</a>
++</div>
++
++<form class="mb-3 row" method="get" action="/customers">
++  <div class="col-auto">
++    <input name="q" value="<%= q || '' %>" class="form-control" placeholder="Pesquisar clientes..."/>
++  </div>
++  <div class="col-auto">
++    <button class="btn btn-secondary">Buscar</button>
++  </div>
++</form>
++
++<table class="table table-striped">
++  <thead>
++    <tr>
++      <th>Nome</th>
++      <th>Telefone</th>
++      <th>Email</th>
++      <th>Criado</th>
++      <th></th>
++    </tr>
++  </thead>
++  <tbody>
++    <% (customers || []).forEach(c => { %>
++      <tr>
++        <td><a href="/customers/<%= c._id || c.id %>"><%= c.name %></a></td>
++        <td><%= c.phone %></td>
++        <td><%= c.email %></td>
++        <td><%= c.created_at ? new Date(c.created_at).toLocaleString() : '-' %></td>
++        <td>
++          <a class="btn btn-sm btn-outline-primary" href="/customers/<%= c._id || c.id %>">Abrir</a>
++          <a class="btn btn-sm btn-outline-secondary" href="/customers/<%= c._id || c.id %>/edit">Editar</a>
++          <form action="/customers/<%= c._id || c.id %>/delete" method="post" style="display:inline" onsubmit="return confirm('Excluir cliente? Esta ação não pode ser desfeita.')">
++            <button class="btn btn-sm btn-outline-danger" type="submit">Excluir</button>
++          </form>
++        </td>
++      </tr>
++    <% }) %>
++  </tbody>
++</table>
++
++<%- include('partials/footer') %>
+*** End Patch
+*** Begin Patch
+*** Update File: views/vehicles.ejs
+@@
+-<% layout('layout') -%>
+-<div class="d-flex justify-content-between mb-3">
+-  <h2>Veículos</h2>
+-  <a class="btn btn-success" href="/vehicles/new">Novo veículo</a>
+-</div>
+-
+-<table class="table table-striped">
+-  <thead><tr><th>Placa</th><th>Veículo</th><th>Dono</th><th>Criado</th></tr></thead>
+-  <tbody>
+-    <% vehicles.forEach(v => { %>
+-      <tr>
+-        <td><%= v.plate %></td>
+-        <td><%= v.make %> <%= v.model %> (<%= v.year %>)</td>
+-        <td><%= v.customer_name %></td>
+-        <td><%= new Date(v.created_at).toLocaleString() %></td>
+-      </tr>
+-    <% }) %>
+-  </tbody>
+-</table>
++<%- include('partials/header') %>
++
++<div class="d-flex justify-content-between mb-3">
++  <h2>Veículos</h2>
++  <a class="btn btn-success" href="/vehicles/new">Novo veículo</a>
++</div>
++
++<form class="mb-3 row" method="get" action="/vehicles">
++  <div class="col-auto">
++    <input name="q" value="<%= q || '' %>" class="form-control" placeholder="Pesquisar veículos..."/>
++  </div>
++  <div class="col-auto">
++    <button class="btn btn-secondary">Buscar</button>
++  </div>
++</form>
++
++<table class="table table-striped">
++  <thead><tr><th>Placa</th><th>Veículo</th><th>Dono</th><th>Criado</th><th></th></tr></thead>
++  <tbody>
++    <% (vehicles || []).forEach(v => { %>
++      <tr>
++        <td><%= v.plate %></td>
++        <td><%= v.make %> <%= v.model %> (<%= v.year %>)</td>
++        <td><%= v.customer_name %></td>
++        <td><%= v.created_at ? new Date(v.created_at).toLocaleString() : '-' %></td>
++        <td>
++          <a class="btn btn-sm btn-outline-secondary" href="/vehicles/<%= v._id %>/edit">Editar</a>
++          <form action="/vehicles/<%= v._id %>/delete" method="post" style="display:inline" onsubmit="return confirm('Excluir veículo?')">
++            <button class="btn btn-sm btn-outline-danger">Excluir</button>
++          </form>
++        </td>
++      </tr>
++    <% }) %>
++  </tbody>
++</table>
++
++<%- include('partials/footer') %>
+*** End Patch
+*** Begin Patch
+*** Update File: views/appointments.ejs
+@@
+-<% layout('layout') -%>
+-<div class="d-flex justify-content-between mb-3">
+-  <h2>Agendamentos</h2>
+-  <a class="btn btn-success" href="/appointments/new">Novo agendamento</a>
+-</div>
+-
+-<table class="table table-striped">
+-  <thead><tr><th>Data/Hora</th><th>Veículo</th><th>Cliente</th><th>Serviço</th><th>Status</th></tr></thead>
+-  <tbody>
+-    <% appts.forEach(a => { %>
+-      <tr>
+-        <td><%= a.scheduled_at ? new Date(a.scheduled_at).toLocaleString() : '-' %></td>
+-        <td><%= a.make %> <%= a.model %> (<%= a.plate %>)</td>
+-        <td><%= a.customer_name %></td>
+-        <td><%= a.service_desc || '-' %></td>
+-        <td><%= a.status %></td>
+-      </tr>
+-    <% }) %>
+-  </tbody>
+-</table>
++<%- include('partials/header') %>
++
++<div class="d-flex justify-content-between mb-3">
++  <h2>Agendamentos</h2>
++  <a class="btn btn-success" href="/appointments/new">Novo agendamento</a>
++</div>
++
++<form class="mb-3 row" method="get" action="/appointments">
++  <div class="col-auto">
++    <input name="q" value="<%= q || '' %>" class="form-control" placeholder="Pesquisar agendamentos..."/>
++  </div>
++  <div class="col-auto">
++    <button class="btn btn-secondary">Buscar</button>
++  </div>
++</form>
++
++<table class="table table-striped">
++  <thead><tr><th>Data/Hora</th><th>Veículo</th><th>Cliente</th><th>Serviço</th><th>Status</th><th></th></tr></thead>
++  <tbody>
++    <% (appts || []).forEach(a => { %>
++      <tr>
++        <td><%= a.scheduled_at ? new Date(a.scheduled_at).toLocaleString() : '-' %></td>
++        <td><%= a.make %> <%= a.model %> (<%= a.plate %>)</td>
++        <td><%= a.customer_name %></td>
++        <td><%= a.service_desc || '-' %></td>
++        <td><%= a.status %></td>
++        <td>
++          <a class="btn btn-sm btn-outline-secondary" href="/appointments/<%= a._id %>/edit">Editar</a>
++          <a class="btn btn-sm btn-outline-primary" href="/appointments/<%= a._id %>/estimate" target="_blank">PDF</a>
++          <form action="/appointments/<%= a._id %>/delete" method="post" style="display:inline" onsubmit="return confirm('Excluir agendamento?')">
++            <button class="btn btn-sm btn-outline-danger">Excluir</button>
++          </form>
++        </td>
++      </tr>
++    <% }) %>
++  </tbody>
++</table>
++
++<%- include('partials/footer') %>
+*** End Patch
+*** Begin Patch
+*** Add File: backup.js
++const fs = require('fs');
++const path = require('path');
++
++const dataDir = path.join(__dirname, 'data');
++const backupsDir = path.join(__dirname, 'backups');
++
++if (!fs.existsSync(backupsDir)) fs.mkdirSync(backupsDir);
++
++const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
++const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.db') || f.endsWith('.db-journal') || f.endsWith('.json'));
++
++files.forEach(file => {
++  const src = path.join(dataDir, file);
++  const dest = path.join(backupsDir, `${file}.${timestamp}.bak`);
++  fs.copyFileSync(src, dest);
++  console.log(`Backup feito: ${dest}`);
++});
++
++console.log('Backup concluído.');
++
+*** End Patch
+*** Begin Patch
+*** Add File: Dockerfile
++FROM node:18-alpine
++
++WORKDIR /app
++
++COPY package*.json ./
++RUN npm ci --production
++
++COPY . .
++
++ENV PORT=3000
++EXPOSE 3000
++
++CMD ["node", "server.js"]
++
+*** End Patch
+*** Begin Patch
+*** Add File: Procfile
++web: node server.js
++
+*** End Patch
+*** Begin Patch
+*** Update File: package.json
+@@
+   "scripts": {
+-    "start": "node server.js",
+-    "dev": "nodemon server.js"
++    "start": "node server.js",
++    "dev": "nodemon server.js",
++    "backup": "node backup.js"
+   },
+*** End Patch
+*** End Patch
